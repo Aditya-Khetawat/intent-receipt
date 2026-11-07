@@ -13,21 +13,51 @@ export function errorResponse(e: unknown, fallbackStatus = 500) {
   return json({ error: err?.message ?? "Unexpected error" }, status >= 400 && status < 600 ? status : 500);
 }
 
-// In-memory fixed-window rate limiter (per IP + bucket). Fine for a single instance.
+/**
+ * Client IP for rate limiting, taken only from values a client cannot forge:
+ * TRUSTED_CLIENT_IP_HEADER if the host is known to set it (e.g. cf-connecting-ip),
+ * otherwise the RIGHTMOST X-Forwarded-For entry, which the closest proxy appends.
+ * The leftmost entry is client-controlled when proxies append rather than replace.
+ */
+export function clientIp(headers: Headers): string {
+  const trusted = process.env.TRUSTED_CLIENT_IP_HEADER?.trim().toLowerCase();
+  if (trusted) {
+    const v = headers.get(trusted)?.trim();
+    if (v) return v;
+  }
+  const hops = headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return hops?.at(-1) || "local";
+}
+
+// In-memory fixed-window rate limiter. Fine for a single instance.
 const hits = new Map<string, { n: number; reset: number }>();
 
-export function rateLimit(req: Request, bucket: string, limit: number, windowMs = 60_000): NextResponse | null {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "local";
-  const key = `${bucket}:${ip}`;
-  const now = Date.now();
+function hit(key: string, limit: number, windowMs: number, now: number): boolean {
   const h = hits.get(key);
   if (!h || h.reset < now) {
     hits.set(key, { n: 1, reset: now + windowMs });
-    return null;
+    return true;
   }
   h.n++;
-  if (h.n > limit) return json({ error: "Too many requests. Please wait a minute." }, 429);
+  return h.n <= limit;
+}
+
+/** Per-IP limit plus a global cap per bucket (10x), so a spoofed or shared IP cannot exceed it. */
+export function rateLimit(req: Request, bucket: string, limit: number, windowMs = 60_000): NextResponse | null {
+  const now = Date.now();
+  const okIp = hit(`${bucket}:ip:${clientIp(req.headers)}`, limit, windowMs, now);
+  const okGlobal = hit(`${bucket}:global`, limit * 10, windowMs, now);
+  if (!okIp || !okGlobal) return json({ error: "Too many requests. Please wait a minute." }, 429);
   return null;
+}
+
+/** Test helper. */
+export function resetRateLimits() {
+  hits.clear();
 }
 
 /** dev/* routes exist only in demo mode. */
