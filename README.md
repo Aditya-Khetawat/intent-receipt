@@ -35,7 +35,7 @@ AI agents are starting to shop for people. When an agent-made purchase goes wron
 
 ## How AI is used (the product's runtime AI)
 
-- **Shopping agent:** an LLM with tool calling (`search_catalog`, `get_product`, `propose_selection`, `check_order_status`). Default model: **Gemini Flash (`gemini-3.5-flash`) via a free Google AI Studio key**, through the Vercel AI SDK. Swap providers with env vars only (`AI_PROVIDER=anthropic` etc.).
+- **Shopping agent:** an LLM with tool calling (`search_catalog`, `get_product`, `propose_selection`, `check_order_status`). Default model: **`openai/gpt-oss-120b` (open-weight, Apache 2.0) on Groq's free tier**, through the Vercel AI SDK. Swap providers with env vars only (`AI_PROVIDER=google` for Gemini, `anthropic`).
 - **Dispute analyst:** the same layer with structured JSON output, no tools, buyer messages treated as untrusted data.
 - **Evidence validator (code, not AI):** checks every citation against the source.
 - Claude Code was used as the development tool; it is not part of the running product.
@@ -105,7 +105,7 @@ To enable the real integrations, fill `.env`:
 |---|---|
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | developer.paypal.com → Apps & Credentials → **Sandbox** → Create App |
 | `PAYPAL_WEBHOOK_ID` | In that app: add webhook `https://<your-url>/api/webhooks/paypal` with `CUSTOMER.DISPUTE.CREATED`, `CUSTOMER.DISPUTE.UPDATED`, `CUSTOMER.DISPUTE.RESOLVED`, `PAYMENT.CAPTURE.COMPLETED`. For local dev use a tunnel (`cloudflared tunnel --url http://localhost:3000`) and a second webhook. |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | https://aistudio.google.com/apikey (free tier) |
+| `GROQ_API_KEY` | https://console.groq.com/keys (free tier, no card). Alternative: `AI_PROVIDER=google` + `GOOGLE_GENERATIVE_AI_API_KEY` from https://aistudio.google.com/apikey |
 | `INTENT_SIGNING_KEY` | `npm run gen-keys` (optional in development: a dev key is generated in `data/`) |
 
 Sandbox buyer for the PayPal checkout popup (PayPal **sandbox** test account, no real money): email `sb-wfdf953771758@personal.example.com`, password `n^6CD;M5`.
@@ -138,4 +138,4 @@ Attach an intent receipt to agent-initiated orders (e.g. via `custom_id` or a de
 
 ## License and acknowledgements
 
-MIT ([LICENSE](LICENSE)). Uses the PayPal sandbox, PayPal Agent Toolkit, `@paypal/react-paypal-js`, Vercel AI SDK, Google Gemini (runtime), AG Grid Community, Next.js, SQLite (`better-sqlite3`), Render. All brands in the demo catalog (Fernhill Outfitters, Brightpine, Marlowe Labs, Quillon, Alder & Finch, Tidewell, Northwind Parcel) are fictional.
+MIT ([LICENSE](LICENSE)). Uses the PayPal sandbox, PayPal Agent Toolkit, `@paypal/react-paypal-js`, Vercel AI SDK, Groq running OpenAI gpt-oss-120b (runtime), AG Grid Community, Next.js, SQLite (`better-sqlite3`), Render. All brands in the demo catalog (Fernhill Outfitters, Brightpine, Marlowe Labs, Quillon, Alder & Finch, Tidewell, Northwind Parcel) are fictional.

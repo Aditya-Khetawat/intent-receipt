@@ -11,7 +11,7 @@
 
 ## Secrets (Render dashboard, never in git)
 
-`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `PAYPAL_WEBHOOK_ID`, `GOOGLE_GENERATIVE_AI_API_KEY`, `INTENT_SIGNING_KEY` (from `npm run gen-keys`), `APP_BASE_URL`.
+`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `PAYPAL_WEBHOOK_ID`, `GROQ_API_KEY`, `INTENT_SIGNING_KEY` (from `npm run gen-keys`), `APP_BASE_URL`.
 
 ## Cost control
 
@@ -19,7 +19,7 @@
 - Per-IP rate limits: agent 12/min, orders 20/min, simulate 20/min, analyze 6/min, reset 5/min, plus a global cap of 10x each limit per minute.
 - The client IP comes from the **rightmost** `X-Forwarded-For` hop (added by the closest proxy; the leftmost entry can be forged because Render appends rather than replaces). If Render's proxy hop turns out to be shared by all visitors, per-IP limits become coarse but cannot be bypassed. **Owner, after deploy:** check the headers Render forwards (e.g. log them once); if `cf-connecting-ip` or `true-client-ip` carries the real client IP, set `TRUSTED_CLIENT_IP_HEADER` to it.
 - Agent: max 8 tool steps per turn, 1200 output tokens, 24 messages per session. Analyst: one call per dispute (plus at most one schema retry and one corrective re-run), 4000 output tokens, cached by input hash.
-- Free Google AI Studio tier: no billing. Free-tier inputs may be used by Google to improve products; the app only ever sends fictional demo data.
+- Free Groq tier: no billing, no card; per-model request and token limits apply per organisation (check console.groq.com → Limits). The app only ever sends fictional demo data.
 - If a paid key is ever used, set a monthly spend limit in the provider console.
 
 ## After Dec 21, 2026

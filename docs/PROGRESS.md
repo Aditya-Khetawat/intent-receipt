@@ -20,7 +20,7 @@ _Last updated: 2026-11-07_
 
 ## Blocked / needs owner
 - PayPal sandbox Client ID + Secret, sandbox buyer login, webhook ID (after deploy).
-- Google AI Studio API key.
+- Groq API key (console.groq.com, free).
 - Render account + hackathon credits.
 
 ## Honest gaps

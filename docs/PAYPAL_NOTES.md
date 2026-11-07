@@ -69,5 +69,6 @@ Verified by loading the package locally and dumping tool schemas (2026-11-07):
 |---|---|---|
 | AI SDK `ai@7.0.164`: `generateText` with `tools` + `stopWhen: isStepCount(n)`, structured output via `output: Output.object({ schema })`, `timeout`, `maxRetries` | package docs in `node_modules/ai/docs` | 2026-11-07 |
 | `@ai-sdk/google@4` exports `createGoogle`; its model id list includes `gemini-3.5-flash`, `gemini-flash-latest` | package type definitions | 2026-11-07 |
+| `@ai-sdk/groq@4` exports `createGroq`; model ids include `openai/gpt-oss-120b`; structured output uses `json_schema`, strict mode on by default (we turn it off because strict mode does not accept `min`/`max` keywords; zod validates the result) | package types + docs | 2026-11-07 |
 | Tool loop and structured output verified against AI SDK v7 with `MockLanguageModelV4` | `tests/ai-wiring.test.ts` | 2026-11-07 |
-| Free-tier limits and live tool-calling with `gemini-3.5-flash` | **PENDING KEY** (`npm run doctor`, `npm run ai-eval`) | |
+| Free-tier limits and live tool-calling with `openai/gpt-oss-120b` on Groq | **PENDING KEY** (`npm run doctor`, `npm run ai-eval`) | |

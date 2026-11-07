@@ -21,12 +21,12 @@ AI agents are starting to buy things for us. When something goes wrong, nobody c
 Merchants accepting agent-initiated orders; PayPal dispute and risk teams; agent developers who need a receipt format and a signal when their agent got it wrong.
 
 ## How we built it
-Next.js 16 (App Router) and TypeScript, SQLite, Tailwind. PayPal: Orders v2 create and capture, PayPal JS SDK buttons (`@paypal/react-paypal-js`), Webhooks with `verify-webhook-signature`, Disputes v1 (get, accept-claim, make-offer, send-message, provide-evidence), and the PayPal Agent Toolkit (`get_order` as an agent tool, `get_dispute` in dispute ingest). Runtime AI: [gemini-3.5-flash] via the Google AI Studio API through the Vercel AI SDK, with tool calling (agent) and structured output (analyst); the provider can be swapped by environment variables. AG Grid Community for the console. Hosted on Render.
+Next.js 16 (App Router) and TypeScript, SQLite, Tailwind. PayPal: Orders v2 create and capture, PayPal JS SDK buttons (`@paypal/react-paypal-js`), Webhooks with `verify-webhook-signature`, Disputes v1 (get, accept-claim, make-offer, send-message, provide-evidence), and the PayPal Agent Toolkit (`get_order` as an agent tool, `get_dispute` in dispute ingest). Runtime AI: OpenAI's open-weight gpt-oss-120b on Groq through the Vercel AI SDK, with tool calling (agent) and structured output (analyst); the provider can be swapped by environment variables. AG Grid Community for the console. Hosted on Render.
 
 **What is real vs simulated:** payments, order creation and capture, webhook verification and the Agent Toolkit calls run against the real PayPal sandbox. The four demo disputes are [simulated: PayPal has no API to create disputes, so we built payloads shaped like PayPal's dispute webhook and send them through the exact same ingest pipeline; they are labelled SIMULATED and their actions are recorded but not sent]. Seeded order history is labelled SIMULATED. When the live AI is unavailable, demo analyses fall back to stored results labelled CACHED.
 
 ## Tools and models used, and how
-- **[gemini-3.5-flash] (Google AI Studio API):** the product's runtime AI. Powers the shopping agent (tool calling) and the dispute analyst (structured JSON output whose citations are machine-verified).
+- **gpt-oss-120b on Groq (open-weight model, Groq API):** the product's runtime AI. Powers the shopping agent (tool calling) and the dispute analyst (structured JSON output whose citations are machine-verified).
 - **Claude Code:** the development tool used to build the project. It is not part of the running product.
 - **PayPal Agent Toolkit:** `get_order` exposed to the shopping agent; `get_dispute` used to fetch full dispute details on real webhooks.
 - **AG Grid Community:** merchant dispute queue. **Render:** hosting.
@@ -53,5 +53,5 @@ Attach an intent receipt to agent-initiated orders; feed receipts into dispute e
 - Optional real checkout: PayPal sandbox buyer sb-wfdf953771758@personal.example.com / n^6CD;M5 (sandbox test account only, no real money).
 - Run locally: see README Quick start. 5-minute path: `docs/JUDGES.md`.
 
-**Built with:** typescript, next.js, tailwindcss, sqlite, paypal, paypal-orders-api, paypal-webhooks, paypal-disputes-api, paypal-agent-toolkit, gemini, vercel-ai-sdk, ag-grid, render, claude-code
+**Built with:** typescript, next.js, tailwindcss, sqlite, paypal, paypal-orders-api, paypal-webhooks, paypal-disputes-api, paypal-agent-toolkit, groq, gpt-oss, vercel-ai-sdk, ag-grid, render, claude-code
 **Links:** [repo] · [hosted demo] · [YouTube video]
