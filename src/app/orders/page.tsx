@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ordersView } from "@/lib/views";
 import { env } from "@/lib/env";
@@ -5,6 +6,7 @@ import { SourceBadge, money, shortDate, Badge } from "@/components/ui";
 import { SimulateDisputeButton } from "@/components/SimulateDisputeButton";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Orders" };
 
 export default function OrdersPage() {
   const orders = ordersView();
@@ -14,7 +16,11 @@ export default function OrdersPage() {
       <p className="text-ink-2 mt-1">Every order links to an Intent Receipt. Seeded history is labelled SIMULATED.</p>
       {orders.length === 0 ? (
         <div className="card p-8 mt-6 text-center text-ink-2">
-          No orders yet. <Link href="/shop" className="text-accent underline">Ask the agent to buy something</Link>.
+          No orders yet.{" "}
+          <Link href="/shop" className="text-accent underline">
+            Ask the agent to buy something
+          </Link>
+          .
         </div>
       ) : (
         <ul className="mt-6 space-y-3">
@@ -31,7 +37,8 @@ export default function OrdersPage() {
                   {o.buyer} asked: &ldquo;{o.request}&rdquo;
                 </p>
                 <p className="text-xs text-ink-3 mt-1">
-                  {money(o.amount_cents / 100, o.currency)} · {shortDate(o.created_at)} · <span className="font-mono">{o.paypal_order_id}</span>
+                  {money(o.amount_cents / 100, o.currency)} · {shortDate(o.created_at)} ·{" "}
+                  <span className="font-mono">{o.paypal_order_id}</span>
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -43,8 +50,7 @@ export default function OrdersPage() {
                     View dispute
                   </Link>
                 ) : (
-                  env.demoMode &&
-                  o.paypal_capture_id && <SimulateDisputeButton scenario={o.scenario} orderId={o.id} />
+                  env.demoMode && o.paypal_capture_id && <SimulateDisputeButton scenario={o.scenario} orderId={o.id} />
                 )}
               </div>
             </li>

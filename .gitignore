@@ -48,3 +48,6 @@ next-env.d.ts
 /.cache-specs/
 /.claude/
 /HACKATHON_BRIEF.md
+
+# Impeccable design-review snapshots (local)
+.impeccable/

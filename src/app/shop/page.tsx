@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { appStatus } from "@/lib/views";
 import { env } from "@/lib/env";
 import { ShopClient } from "@/components/ShopClient";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Shop with the agent" };
 
 export default async function ShopPage({ searchParams }: PageProps<"/shop">) {
   const sp = await searchParams;

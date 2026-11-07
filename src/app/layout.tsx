@@ -9,7 +9,7 @@ const plexSans = IBM_Plex_Sans({ variable: "--font-plex-sans", subsets: ["latin"
 const plexMono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "IntentReceipt · Accountability for agentic commerce on PayPal",
+  title: { default: "IntentReceipt · Accountability for agentic commerce on PayPal", template: "%s · IntentReceipt" },
   description:
     "Receipts for what the AI was asked to do. Signed intent records for agent-initiated PayPal orders, and an AI dispute analyst with verified evidence.",
 };
