@@ -161,7 +161,9 @@ a {
     border: 1px solid var(--line);
     border-radius: 8px;
     color: var(--ink);
-    transition: border-color 150ms, box-shadow 150ms;
+    transition:
+      border-color 150ms,
+      box-shadow 150ms;
   }
   .field:hover:not(:disabled) {
     border-color: var(--line-strong);
@@ -357,7 +359,7 @@ a {
 .nudge {
   transition: transform 200ms var(--ease-out-expo);
 }
-:is(a, button):hover > .nudge {
+:is(a, button):hover .nudge {
   transform: translateX(3px);
 }
 

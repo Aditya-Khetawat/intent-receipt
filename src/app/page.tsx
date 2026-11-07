@@ -1,6 +1,10 @@
 import Link from "next/link";
-import { appStatus } from "@/lib/views";
-import { ArrowIcon } from "@/components/ui";
+import { appStatus, receiptView } from "@/lib/views";
+import { describeAttributes } from "@/lib/intents";
+import { ArrowIcon, money } from "@/components/ui";
+
+// The seeded "buyer changed their mind" receipt doubles as the hero, so its numbers are real.
+const HERO_RECEIPT = "ir_seed_s1_ridge40";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +15,7 @@ export default function Home() {
       <section className="pt-14 pb-10 grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center">
         <div>
           <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-semibold tracking-[-0.03em] leading-[1.05]">
-            Receipts for what the AI
-            <br className="hidden sm:block" />
+            Receipts for what the AI <br className="hidden sm:block" />
             was asked to do.
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-ink-2 max-w-xl">
@@ -37,7 +40,7 @@ export default function Home() {
             <Status ok={s.ai.available} label={`AI (${s.ai.provider})`} okText={s.ai.agentModel} offText="no key (cached analyses only)" />
           </dl>
         </div>
-        <ReceiptIllustration />
+        <HeroReceipt />
       </section>
 
       <section aria-labelledby="how" className="pt-10 pb-8">
@@ -48,18 +51,18 @@ export default function Home() {
           {[
             {
               n: "1",
-              t: "Intent is captured before payment",
-              d: "The shopping agent extracts your constraints. A deterministic checker (code, not the model) marks each one met or unmet on the confirmation card. Your confirmation and the exact card text are hashed, signed with Ed25519 and chained.",
+              t: "Your request is pinned down before you pay",
+              d: "The agent turns your words into requirements, and code, not the model, checks each one on the confirmation card. The exact card you confirm is hashed, signed (Ed25519) and chained, so nobody can quietly change it later.",
             },
             {
               n: "2",
-              t: "Linked to the PayPal order",
-              d: "The order is created with PayPal Orders v2 only after a signed confirmation exists, and only for the confirmed amount and item. The order carries the receipt id in custom_id. Capture is appended to the same chain.",
+              t: "Tied to the PayPal order",
+              d: "PayPal Orders v2 creates the order only after a signed confirmation exists, for exactly that item and amount. The order carries the receipt id (in custom_id), and the capture joins the same chain.",
             },
             {
               n: "3",
-              t: "Disputes get verified evidence",
-              d: "When a dispute arrives, an AI analyst reads the receipt, order and shipping history. Every citation it makes is a JSON path that code checks against the source. It recommends a refund when the agent was at fault. A human approves every action.",
+              t: "Disputes get evidence you can check",
+              d: "When a dispute arrives, an AI analyst reads the receipt, order and shipping history. Each citation points at a field in the record, and code rejects any that do not match. If the agent was at fault, it recommends a refund. A human approves every action.",
             },
           ].map((s) => (
             <li key={s.n} className="card p-5">
@@ -118,36 +121,53 @@ function Status({ ok, label, okText, offText }: { ok: boolean; label: string; ok
   );
 }
 
-function ReceiptIllustration() {
-  const rows = [
-    ["You asked", "waterproof 40L backpack, black, under $85"],
-    ["Agent chose", "Brightpine Ridge Pack · 40L · black · $79"],
-    ["Checker", "4 of 4 requirements met"],
-    ["You confirmed", "sha256 3f9a…c21e"],
-    ["PayPal", "order · capture COMPLETED"],
+function HeroReceipt() {
+  const v = receiptView(HERO_RECEIPT);
+  if (!v) return null;
+  const { record: r } = v.intent;
+  const s = r.selection;
+  const results = r.constraint_check.results;
+  const met = results.filter((x) => x.status === "MET").length;
+  const hash = r.confirmation?.presented_text_sha256;
+  const rows: [string, string][] = [
+    ["You asked", r.request.verbatim],
+    ["Agent chose", `${s.product_name} · ${describeAttributes(s.variant_attributes)} · ${money(s.price_cents / 100, s.currency)}`],
+    ["Checker", `${met} of ${results.length} requirements met`],
+    ["You confirmed", hash ? `sha256 ${hash.slice(0, 4)}…${hash.slice(-4)}` : "not confirmed"],
+    ["PayPal", v.order ? `order ${v.order.status.toLowerCase()} · ${v.order.simulated ? "simulated" : "sandbox"}` : "no order"],
   ];
   return (
-    <div
-      className="card p-6 rotate-[0.4deg] border-transparent shadow-[0_18px_40px_-20px_rgb(20_24_31/0.28)] dark:border-line dark:shadow-none"
-      aria-hidden="true"
+    <Link
+      href={`/receipt/${HERO_RECEIPT}`}
+      className="group card block p-6 rotate-[0.4deg] border-transparent shadow-[0_18px_40px_-20px_rgb(20_24_31/0.28)] transition-[rotate,box-shadow] duration-300 hover:rotate-0 hover:shadow-[0_24px_48px_-22px_rgb(20_24_31/0.34)] dark:border-line dark:shadow-none"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold">Intent receipt</span>
-        <span className="stamp text-[11px] font-semibold uppercase tracking-wide bg-success-soft text-success rounded-md px-1.5 py-0.5">
-          Chain intact
+        <span
+          className={`stamp text-[11px] font-semibold uppercase tracking-wide rounded-md px-1.5 py-0.5 ${
+            v.chain.ok ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
+          }`}
+        >
+          {v.chain.ok ? "Chain intact" : "Chain broken"}
         </span>
       </div>
       <dl className="print-in mt-4 divide-y divide-line">
-        {rows.map(([k, v]) => (
+        {rows.map(([k, val]) => (
           <div key={k} className="py-2.5 grid grid-cols-[110px_1fr] gap-3 text-sm">
             <dt className="text-ink-3">{k}</dt>
-            <dd className={k === "You confirmed" ? "font-mono text-[13px]" : ""}>{v}</dd>
+            <dd className={k === "You confirmed" ? "font-mono text-[13px]" : ""}>{val}</dd>
           </div>
         ))}
       </dl>
-      <div className="mt-4 border-t border-dashed border-line pt-3 font-mono text-[11px] text-ink-3 leading-5">
-        seq 41 → 42 → 43 · Ed25519 · ir-key-1
+      <div className="mt-4 border-t border-dashed border-line pt-3 flex items-center justify-between gap-3 font-mono text-[11px] text-ink-3 leading-5">
+        <span>
+          seq {v.entries.map((e) => e.seq).join(" → ")} · Ed25519 · {v.chain.key_id}
+        </span>
+        <span className="font-sans text-xs font-semibold text-accent inline-flex items-center gap-1">
+          Open
+          <ArrowIcon />
+        </span>
       </div>
-    </div>
+    </Link>
   );
 }

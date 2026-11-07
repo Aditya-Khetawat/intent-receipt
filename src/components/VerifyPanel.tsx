@@ -28,6 +28,7 @@ type Result =
   | { state: "ok"; links: Link[]; keyId: string; sigMode: "browser" | "server" }
   | { state: "fail"; links: Link[]; seq: number; reason: string };
 
+const ownCount = (links: Link[]) => links.filter((l) => l.own).length;
 const b64ToBytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 const sha256 = async (s: string) => bytesToHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 
@@ -88,12 +89,13 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
   const trailEnd = done ? delayFor(result.links.length, result.links.length) + 0.2 : 0;
 
   return (
-    <section className="card p-5" aria-live="polite">
+    <section className="card p-5">
       <div className="flex flex-wrap items-center gap-3 justify-between">
         <div>
           <h2 className="font-semibold">Verify this receipt</h2>
           <p className="text-sm text-ink-3">
-            Server check: {serverOk ? `chain intact, ${count} entries, key ${keyId}` : "FAILED"}. Run the check yourself in this browser:
+            Server check: {serverOk ? `whole ledger intact (${count} entries, key ${keyId})` : "FAILED"}. Re-check this receipt&apos;s chain
+            yourself, in this browser:
           </p>
         </div>
         <button
@@ -111,38 +113,42 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
 
       {done && result.links.length > 0 && <ChainTrail key={run} links={result.links} />}
 
-      {result.state === "ok" && (
-        <motion.div
-          key={`ok-${run}`}
-          className="mt-4 rounded-lg bg-success-soft text-success p-3 font-semibold"
-          role="status"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, ease: EASE, delay: trailEnd }}
-        >
-          <CheckIcon className="inline -mt-0.5 mr-1.5" />
-          Chain intact, {result.links.length} entries, signed by {result.keyId}.
-          <span className="block font-normal text-sm mt-1">
-            SHA-256 recomputed in your browser.{" "}
-            {result.sigMode === "browser"
-              ? "Ed25519 signatures verified in your browser."
-              : "Your browser lacks Ed25519 in Web Crypto, so signatures were verified on the server."}
-          </span>
-        </motion.div>
-      )}
-      {result.state === "fail" && (
-        <motion.div
-          key={`fail-${run}`}
-          className="mt-4 rounded-lg bg-danger-soft text-danger p-3 font-semibold"
-          role="alert"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, ease: EASE, delay: trailEnd }}
-        >
-          <CrossIcon className="inline -mt-0.5 mr-1.5" />
-          Verification failed{result.seq ? ` at seq ${result.seq}` : ""}: {result.reason}
-        </motion.div>
-      )}
+      {/* Only the outcome is announced; the trail above is visual replay. */}
+      <div aria-live="polite">
+        {result.state === "ok" && (
+          <motion.div
+            key={`ok-${run}`}
+            className="mt-4 rounded-lg bg-success-soft text-success p-3 font-semibold"
+            role="status"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: EASE, delay: trailEnd }}
+          >
+            <CheckIcon className="inline -mt-0.5 mr-1.5" />
+            Chain intact, {result.links.length} entries, signed by {result.keyId}.
+            <span className="block font-normal text-sm mt-1">
+              Checked every entry from #1 up to this receipt&apos;s last ({ownCount(result.links)} of them belong to this receipt). SHA-256
+              recomputed in your browser.{" "}
+              {result.sigMode === "browser"
+                ? "Ed25519 signatures verified in your browser."
+                : "Your browser lacks Ed25519 in Web Crypto, so signatures were verified on the server."}
+            </span>
+          </motion.div>
+        )}
+        {result.state === "fail" && (
+          <motion.div
+            key={`fail-${run}`}
+            className="mt-4 rounded-lg bg-danger-soft text-danger p-3 font-semibold"
+            role="alert"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.32, ease: EASE, delay: trailEnd }}
+          >
+            <CrossIcon className="inline -mt-0.5 mr-1.5" />
+            Verification failed{result.seq ? ` at seq ${result.seq}` : ""}: {result.reason}
+          </motion.div>
+        )}
+      </div>
     </section>
   );
 }
@@ -155,7 +161,7 @@ function ChainTrail({ links }: { links: Link[] }) {
   const n = links.length;
   return (
     <div className="mt-4">
-      <ol className="flex flex-wrap items-center gap-y-2" aria-label="Ledger entries checked in order">
+      <ol className="flex flex-wrap items-center gap-y-2" aria-hidden="true">
         {links.map((l, i) => (
           <li key={l.seq} className="flex items-center">
             {i > 0 && (
@@ -175,11 +181,7 @@ function ChainTrail({ links }: { links: Link[] }) {
               initial={{ scale: 0.3, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 600, damping: 28, delay: delayFor(i, n) }}
-            >
-              <span className="sr-only">
-                seq {l.seq} {l.ok ? "verified" : "failed"}
-              </span>
-            </motion.span>
+            ></motion.span>
           </li>
         ))}
       </ol>
@@ -187,9 +189,11 @@ function ChainTrail({ links }: { links: Link[] }) {
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-success" aria-hidden /> this receipt, recomputed here
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full border-[1.5px] border-success" aria-hidden /> other receipts, hash only
-        </span>
+        {links.some((l) => !l.own) && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full border-[1.5px] border-success" aria-hidden /> other receipts, hash only
+          </span>
+        )}
       </p>
     </div>
   );

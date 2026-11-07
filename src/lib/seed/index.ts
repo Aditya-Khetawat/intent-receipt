@@ -52,7 +52,7 @@ function seedScenarios(db: Database.Database) {
     });
     const req = buildOrderRequest(intent.record);
     const record = assertOrderMatchesIntent(intent.id, req);
-    const order = recordOrder(intent.id, record, req, `SIM-${s.key}-${s.intentId.slice(-6).toUpperCase()}`, "CREATED", true, addHours(s.createdAt, 0.06));
+    const order = recordOrder(intent.id, record, req, `SIM-${s.key}-${s.intentId.split("_").at(-1)!.toUpperCase()}`, "CREATED", true, addHours(s.createdAt, 0.06));
     recordCapture(intent.id, order, `SIMCAP-${s.key}-0001`, "COMPLETED", simulatedAmount(order), addHours(s.createdAt, 0.08));
     // Replace the generic label event with the scenario's deterministic fulfillment history.
     db.prepare("DELETE FROM fulfillment_events WHERE order_id = ?").run(order.id);
