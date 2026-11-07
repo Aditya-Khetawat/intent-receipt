@@ -51,7 +51,6 @@ export function ShopClient({
     },
   ]);
   const [input, setInput] = useState(initialPrompt);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [phase, setPhase] = useState<Phase>("chatting");
@@ -70,8 +69,7 @@ export function ShopClient({
     setInput("");
     setBusy(true);
     try {
-      const r = await postJson<{ sessionId: string; reply: string; intent: Proposal | null }>("/api/agent", { sessionId, message: text });
-      setSessionId(r.sessionId);
+      const r = await postJson<{ reply: string; intent: Proposal | null }>("/api/agent", { message: text });
       setMessages((m) => [...m, { role: "agent", text: r.reply }]);
       if (r.intent) {
         setProposal(r.intent);

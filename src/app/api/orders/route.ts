@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { json, errorResponse, rateLimit } from "@/lib/http";
 import { createOrderForIntent } from "@/lib/paypal/orders";
+import { assertOwnsIntent } from "@/lib/session";
 
 const body = z.object({ intentId: z.string().min(3).max(64) });
 
@@ -10,6 +11,7 @@ export async function POST(req: Request) {
   if (limited) return limited;
   try {
     const { intentId } = body.parse(await req.json());
+    assertOwnsIntent(req, intentId);
     const order = await createOrderForIntent(intentId);
     return json({ id: order.paypal_order_id, simulated: order.simulated });
   } catch (e) {
