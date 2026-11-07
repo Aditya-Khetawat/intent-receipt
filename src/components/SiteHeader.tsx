@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutGroup, motion } from "motion/react";
 import { ThemeToggle } from "./ThemeToggle";
+import { SLIDE } from "./motion";
 
 const buyerLinks = [
   { href: "/shop", label: "Shop" },
@@ -15,14 +17,16 @@ export function SiteHeader() {
   const merchant = path.startsWith("/merchant");
   const links = [...(merchant ? merchantLinks : buyerLinks), { href: "/demo", label: "Guided demo" }];
   const isActive = (href: string) => (href === "/demo" ? path === "/demo" : path.startsWith(href));
+  // The active pill slides to the new page instead of blinking between links.
   const navLink = (l: { href: string; label: string }) => (
     <Link
       key={l.href}
       href={l.href}
-      className={`btn btn-ghost text-sm ${isActive(l.href) ? "text-ink bg-neutral-soft" : ""}`}
+      className={`btn btn-ghost relative text-sm ${isActive(l.href) ? "text-ink hover:bg-transparent" : ""}`}
       aria-current={isActive(l.href) ? "page" : undefined}
     >
-      {l.label}
+      {isActive(l.href) && <motion.span layoutId="nav-pill" transition={SLIDE} className="absolute inset-0 rounded-lg bg-neutral-soft" aria-hidden />}
+      <span className="relative">{l.label}</span>
     </Link>
   );
   return (
@@ -32,9 +36,11 @@ export function SiteHeader() {
           <Logo />
           <span>IntentReceipt</span>
         </Link>
-        <nav aria-label="Main" className="hidden sm:flex items-center gap-1 ml-4">
-          {links.map(navLink)}
-        </nav>
+        <LayoutGroup id="main-nav">
+          <nav aria-label="Main" className="hidden sm:flex items-center gap-1 ml-4">
+            {links.map(navLink)}
+          </nav>
+        </LayoutGroup>
         <div className="ml-auto flex items-center gap-2 text-sm">
           <span className="text-ink-3 hidden md:inline">Viewing as</span>
           <nav aria-label="Persona" className="flex rounded-lg border border-line bg-surface p-0.5">
@@ -45,19 +51,22 @@ export function SiteHeader() {
               <Link
                 key={p.href}
                 href={p.href}
-                className={`px-3 py-1 rounded-md transition-colors ${p.on ? "bg-ink text-on-strong" : "text-ink-2 hover:text-ink hover:bg-neutral-soft"}`}
+                className={`relative px-3 py-1 rounded-md transition-colors duration-200 ${p.on ? "text-on-strong" : "text-ink-2 hover:text-ink"}`}
                 aria-current={p.on ? "page" : undefined}
               >
-                {p.label}
+                {p.on && <motion.span layoutId="persona-pill" transition={SLIDE} className="absolute inset-0 rounded-md bg-ink" aria-hidden />}
+                <span className="relative">{p.label}</span>
               </Link>
             ))}
           </nav>
           <ThemeToggle />
         </div>
       </div>
-      <nav aria-label="Main (mobile)" className="sm:hidden flex gap-1 px-4 pb-2 overflow-x-auto">
-        {links.map(navLink)}
-      </nav>
+      <LayoutGroup id="mobile-nav">
+        <nav aria-label="Main (mobile)" className="sm:hidden flex gap-1 px-4 pb-2 overflow-x-auto">
+          {links.map(navLink)}
+        </nav>
+      </LayoutGroup>
     </header>
   );
 }
