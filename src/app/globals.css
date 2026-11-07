@@ -317,6 +317,50 @@ a {
   }
 }
 
+/* After the last line prints, the receipt gets its verdict stamped on. */
+.stamp {
+  animation: stamp 420ms var(--ease-out-expo) 520ms backwards;
+}
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.35) rotate(-6deg);
+    filter: blur(1px);
+  }
+}
+
+/* A connected service breathes; a disconnected one stays still. */
+.live-dot {
+  position: relative;
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Arrow that leans toward where the button goes. */
+.nudge {
+  transition: transform 200ms var(--ease-out-expo);
+}
+:is(a, button):hover > .nudge {
+  transform: translateX(3px);
+}
+
 .reveal {
   animation: reveal 360ms var(--ease-out-expo) backwards;
 }
@@ -330,8 +374,13 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .skeleton,
   .print-in > *,
+  .stamp,
+  .live-dot::after,
   .reveal {
     animation: none;
+  }
+  .nudge {
+    transition: none;
   }
   .spinner {
     animation-duration: 2s;

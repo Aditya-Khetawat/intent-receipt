@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, BusyLabel } from "./ui";
+import { AnimatePresence, motion } from "motion/react";
+import { ArrowIcon, Badge, BusyLabel } from "./ui";
 import { simulateDispute } from "./SimulateDisputeButton";
 
 interface ScenarioView {
@@ -75,25 +76,34 @@ export function DemoRunner({
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-3xl font-semibold tracking-tight">Guided demo</h1>
       <p className="text-ink-2 mt-2 max-w-[70ch]">
-        A five-minute path through the product, no accounts needed.{" "}
-        Payments run on the PayPal sandbox{paypalConfigured ? "" : " (not configured on this server, so checkout is simulated)"}. Seeded history and demo disputes are clearly
+        A five-minute path through the product, no accounts needed. Payments run on the PayPal sandbox
+        {paypalConfigured ? "" : " (not configured on this server, so checkout is simulated)"}. Seeded history and demo disputes are clearly
         labelled SIMULATED and travel through the same ingest code as real PayPal webhooks.
         {!aiAvailable && " The live AI key is not configured here, so analyses show as CACHED."}
       </p>
 
       <ol className="mt-8 space-y-4">
         <Step n={1} title="Meet the buyer and the agent">
-          <p>Ask the shopping agent for a backpack. Watch the deterministic constraint check on the confirmation card, confirm, and pay in the PayPal sandbox.</p>
+          <p>
+            Ask the shopping agent for a backpack. Watch the deterministic constraint check on the confirmation card, confirm, and pay in
+            the PayPal sandbox.
+          </p>
           {paypalConfigured && (
-            <p className="text-sm mt-2 text-ink-3">PayPal will ask you to log in with a sandbox buyer account; the test credentials are in the README (sandbox only).</p>
+            <p className="text-sm mt-2 text-ink-3">
+              PayPal will ask you to log in with a sandbox buyer account; the test credentials are in the README (sandbox only).
+            </p>
           )}
           <Link href={`/shop?prompt=${encodeURIComponent(S1_PROMPT)}`} className="btn btn-primary mt-3">
             Open the shop with the S1 request
+            <ArrowIcon />
           </Link>
         </Step>
 
         <Step n={2} title="Open an Intent Receipt and press Verify">
-          <p>Each order links to a receipt: what you asked, what the agent chose, the constraint check, the exact confirmation text and its hash, all signed and chained.</p>
+          <p>
+            Each order links to a receipt: what you asked, what the agent chose, the constraint check, the exact confirmation text and its
+            hash, all signed and chained.
+          </p>
           <div className="flex flex-wrap gap-2 mt-3">
             <Link href={`/receipt/${scenarios[0].intentId}`} className="btn btn-secondary">
               S1 receipt
@@ -108,7 +118,10 @@ export function DemoRunner({
         </Step>
 
         <Step n={3} title="Trigger a dispute and watch the analyst">
-          <p>Each button builds a payload shaped like PayPal&apos;s CUSTOMER.DISPUTE.CREATED webhook and feeds it through the real ingest pipeline.</p>
+          <p>
+            Each button builds a payload shaped like PayPal&apos;s CUSTOMER.DISPUTE.CREATED webhook and feeds it through the real ingest
+            pipeline.
+          </p>
           <ul className="mt-3 grid sm:grid-cols-2 gap-3">
             {scenarios.map((s) => (
               <li key={s.key} className="rounded-lg border border-line p-3 bg-surface transition-colors hover:border-line-strong">
@@ -117,24 +130,39 @@ export function DemoRunner({
                   <span className="font-medium text-sm">{s.title}</span>
                 </div>
                 <p className="text-xs text-ink-3 mt-1">{s.lookFor}</p>
-                {disputes[s.key] ? (
-                  <Link href={`/merchant/disputes/${disputes[s.key]}`} className="btn btn-secondary mt-2 w-full">
-                    Open dispute
-                  </Link>
-                ) : (
-                  <button type="button" className="btn btn-primary mt-2 w-full" disabled={busy !== null} aria-busy={busy === s.key} onClick={() => trigger(s.key)}>
-                    <BusyLabel busy={busy === s.key} busyText="Opening…">
-                      Trigger {s.key} <Badge tone="warning">Simulated</Badge>
-                    </BusyLabel>
-                  </button>
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  {disputes[s.key] ? (
+                    <motion.div key="open" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
+                      <Link href={`/merchant/disputes/${disputes[s.key]}`} className="btn btn-secondary mt-2 w-full">
+                        Open dispute
+                      </Link>
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="trigger"
+                      exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.12 } }}
+                      type="button"
+                      className="btn btn-primary mt-2 w-full"
+                      disabled={busy !== null}
+                      aria-busy={busy === s.key}
+                      onClick={() => trigger(s.key)}
+                    >
+                      <BusyLabel busy={busy === s.key} busyText="Opening…">
+                        Trigger {s.key} <Badge tone="warning">Simulated</Badge>
+                      </BusyLabel>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </li>
             ))}
           </ul>
         </Step>
 
         <Step n={4} title="Review in the merchant console">
-          <p>The AG Grid queue shows classification, confidence, agent fault and the recommendation. In a dispute, check the N/N verified evidence, the balanced buyer and seller views, edit the drafts and approve.</p>
+          <p>
+            The AG Grid queue shows classification, confidence, agent fault and the recommendation. In a dispute, check the N/N verified
+            evidence, the balanced buyer and seller views, edit the drafts and approve.
+          </p>
           <Link href="/merchant" className="btn btn-secondary mt-3">
             Open merchant console
           </Link>
@@ -142,8 +170,8 @@ export function DemoRunner({
 
         <Step n={5} title="Reset demo data">
           <p>
-            Removes simulated disputes, unconfirmed drafts and chats so the next visitor starts clean. Signed receipts, real sandbox orders and real
-            disputes are kept.
+            Removes simulated disputes, unconfirmed drafts and chats so the next visitor starts clean. Signed receipts, real sandbox orders
+            and real disputes are kept.
           </p>
           <button type="button" className="btn btn-secondary mt-3" onClick={reset} disabled={busy !== null} aria-busy={busy === "reset"}>
             <BusyLabel busy={busy === "reset"} busyText="Resetting…">

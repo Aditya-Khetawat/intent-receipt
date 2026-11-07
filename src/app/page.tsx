@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { appStatus } from "@/lib/views";
+import { ArrowIcon } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,13 @@ export default function Home() {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-ink-2 max-w-xl">
             When an AI agent buys something for you, nobody can prove what you asked for, what the agent understood or what you confirmed.
-            IntentReceipt records all three, signs them into a tamper-evident ledger linked to the PayPal order, and uses AI to resolve disputes
-            with evidence that is checked against the record, fairly for buyer and seller.
+            IntentReceipt records all three, signs them into a tamper-evident ledger linked to the PayPal order, and uses AI to resolve
+            disputes with evidence that is checked against the record, fairly for buyer and seller.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/demo" className="btn btn-primary">
               Run guided demo
+              <ArrowIcon />
             </Link>
             <Link href="/shop" className="btn btn-secondary">
               Shop with the agent
@@ -61,7 +63,9 @@ export default function Home() {
             },
           ].map((s) => (
             <li key={s.n} className="card p-5">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-accent text-sm font-semibold tabular-nums">{s.n}</span>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-accent text-sm font-semibold tabular-nums">
+                {s.n}
+              </span>
               <h3 className="font-semibold mt-3">{s.t}</h3>
               <p className="text-sm text-ink-2 mt-2 leading-relaxed">{s.d}</p>
             </li>
@@ -74,14 +78,16 @@ export default function Home() {
           <h2 className="font-semibold">Who it is for</h2>
           <ul className="mt-3 text-sm text-ink-2 space-y-2 list-disc pl-5">
             <li>
-              <strong className="text-ink">Merchants</strong> accepting agent-initiated orders: contest the disputes you should win, refund the ones you
-              should not fight, and stop over-blocking agent traffic.
+              <strong className="text-ink">Merchants</strong> accepting agent-initiated orders: contest the disputes you should win, refund
+              the ones you should not fight, and stop over-blocking agent traffic.
             </li>
             <li>
-              <strong className="text-ink">Dispute and risk teams</strong>: structured, verifiable evidence about intent instead of screenshots.
+              <strong className="text-ink">Dispute and risk teams</strong>: structured, verifiable evidence about intent instead of
+              screenshots.
             </li>
             <li>
-              <strong className="text-ink">Agent developers</strong>: a receipt format and a signal when the agent, not the buyer, got it wrong.
+              <strong className="text-ink">Agent developers</strong>: a receipt format and a signal when the agent, not the buyer, got it
+              wrong.
             </li>
           </ul>
         </div>
@@ -90,7 +96,10 @@ export default function Home() {
           <ul className="mt-3 text-sm text-ink-2 space-y-2 list-disc pl-5">
             <li>PayPal sandbox only. No real money, no production credentials.</li>
             <li>Seeded demo orders and demo disputes are labelled SIMULATED; precomputed analyses are labelled CACHED.</li>
-            <li>The ledger is tamper-evident (hash chain + signature), not a blockchain. Inspired by agent payment mandates; not an AP2 implementation.</li>
+            <li>
+              The ledger is tamper-evident (hash chain + signature), not a blockchain. Inspired by agent payment mandates; not an AP2
+              implementation.
+            </li>
             <li>The analyst recommends; it does not adjudicate liability. A human approves every action.</li>
           </ul>
         </div>
@@ -102,7 +111,7 @@ export default function Home() {
 function Status({ ok, label, okText, offText }: { ok: boolean; label: string; okText: string; offText: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span aria-hidden className={`h-2 w-2 rounded-full ${ok ? "bg-success" : "bg-warning"}`} />
+      <span aria-hidden className={`h-2 w-2 rounded-full ${ok ? "live-dot bg-success" : "bg-warning"}`} />
       <dt className="text-ink-2">{label}:</dt>
       <dd className="text-ink">{ok ? okText : offText}</dd>
     </div>
@@ -118,10 +127,15 @@ function ReceiptIllustration() {
     ["PayPal", "order · capture COMPLETED"],
   ];
   return (
-    <div className="card p-6 rotate-[0.4deg] border-transparent shadow-[0_18px_40px_-20px_rgb(20_24_31/0.28)] dark:border-line dark:shadow-none" aria-hidden="true">
+    <div
+      className="card p-6 rotate-[0.4deg] border-transparent shadow-[0_18px_40px_-20px_rgb(20_24_31/0.28)] dark:border-line dark:shadow-none"
+      aria-hidden="true"
+    >
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold">Intent receipt</span>
-        <span className="text-[11px] font-semibold uppercase tracking-wide bg-success-soft text-success rounded-md px-1.5 py-0.5">Chain intact</span>
+        <span className="stamp text-[11px] font-semibold uppercase tracking-wide bg-success-soft text-success rounded-md px-1.5 py-0.5">
+          Chain intact
+        </span>
       </div>
       <dl className="print-in mt-4 divide-y divide-line">
         {rows.map(([k, v]) => (

@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { PayPalButtons, PayPalScriptProvider, usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import type { CardLine, IntentRecord } from "@/lib/intents";
-import { AlertIcon, Badge, CheckIcon, Spinner, money } from "./ui";
+import { AnimatePresence, motion } from "motion/react";
+import { AlertIcon, ArrowIcon, Badge, CheckIcon, Spinner, money } from "./ui";
+import { EASE } from "./motion";
+
+// Checkout steps hand off to each other: the old step leaves quickly, the new one settles in.
+const step = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -4, transition: { duration: 0.12 } },
+  transition: { duration: 0.28, ease: EASE },
+} as const;
 
 interface Msg {
   role: "user" | "agent" | "system";
@@ -149,7 +159,11 @@ export function ShopClient({
             <div key={i} className={`reveal flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap ${
-                  m.role === "user" ? "bg-ink text-on-strong" : m.role === "system" ? "bg-warning-soft text-warning text-sm" : "bg-neutral-soft"
+                  m.role === "user"
+                    ? "bg-ink text-on-strong"
+                    : m.role === "system"
+                      ? "bg-warning-soft text-warning text-sm"
+                      : "bg-neutral-soft"
                 }`}
               >
                 {m.text}
@@ -180,7 +194,12 @@ export function ShopClient({
           {messages.length <= 1 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" className="text-left text-xs text-ink-2 rounded-full border border-line px-3 py-1.5 transition-colors hover:bg-neutral-soft hover:text-ink hover:border-line-strong" onClick={() => setInput(s)}>
+                <button
+                  key={s}
+                  type="button"
+                  className="text-left text-xs text-ink-2 rounded-full border border-line px-3 py-1.5 transition-colors hover:bg-neutral-soft hover:text-ink hover:border-line-strong"
+                  onClick={() => setInput(s)}
+                >
                   {s}
                 </button>
               ))}
@@ -214,71 +233,94 @@ export function ShopClient({
       </section>
 
       <aside aria-label="Confirmation" className="space-y-4">
-        {!proposal && (
-          <div className="card p-5 text-sm text-ink-2">
-            <p className="eyebrow mb-2">Confirmation card</p>
-            <p>When the agent proposes an item, its confirmation card appears here with a constraint check computed by code, not by the model.</p>
-            <p className="mt-2">Nothing is ordered until you confirm, and the order can only be created for exactly what you confirmed.</p>
-          </div>
-        )}
-        {proposal && <ConfirmationCard proposal={proposal} />}
-        {proposal && phase === "proposed" && (
-          <div className="flex gap-2">
-            <button type="button" className={`btn flex-1 ${unmet ? "btn-warning" : "btn-primary"}`} onClick={confirm}>
-              {unmet ? "Confirm anyway" : "Confirm"}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={change}>
-              Change
-            </button>
-          </div>
-        )}
-        {phase === "confirming" && (
-          <p className="flex items-center gap-2 text-sm text-ink-3" role="status">
-            <Spinner /> Signing your confirmation…
-          </p>
-        )}
-        {(phase === "pay" || phase === "capturing") && proposal && (
-          <div className="card p-4 space-y-3">
-            <p className="text-sm">
-              <Badge tone="success">Confirmed</Badge> <span className="ml-1">Signed into the ledger. Pay with PayPal (sandbox):</span>
-            </p>
-            {paypalClientId ? (
-              <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD", intent: "capture" }}>
-                <PayPalButtons
-                  style={{ layout: "vertical", label: "pay" }}
-                  disabled={phase === "capturing"}
-                  createOrder={createOrder}
-                  onApprove={async (data) => capture(data.orderID)}
-                  onCancel={() => setError("You cancelled the PayPal approval. Your confirmation is saved; you can pay when ready.")}
-                  onError={(err) => setError(`PayPal error: ${String((err as { message?: string })?.message ?? err)}`)}
-                />
-              </PayPalScriptProvider>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-ink-3">
-                  PayPal sandbox credentials are not configured on this server, so checkout is simulated. The order is labelled SIMULATED everywhere.
-                </p>
-                <button type="button" className="btn btn-secondary w-full" onClick={simulatedCheckout} disabled={phase === "capturing"}>
-                  Simulated checkout <Badge tone="warning">Simulated</Badge>
-                </button>
-              </div>
-            )}
-            {phase === "capturing" && (
-              <p className="flex items-center gap-2 text-sm text-ink-3" role="status">
-                <Spinner /> Capturing payment…
+        <AnimatePresence mode="popLayout" initial={false}>
+          {!proposal && (
+            <motion.div key="placeholder" {...step} className="card p-5 text-sm text-ink-2">
+              <p className="eyebrow mb-2">Confirmation card</p>
+              <p>
+                When the agent proposes an item, its confirmation card appears here with a constraint check computed by code, not by the
+                model.
               </p>
-            )}
-          </div>
-        )}
-        {phase === "done" && proposal && (
-          <div className="reveal card p-5 border-success/40" role="status">
-            <p className="font-semibold text-success">Payment captured</p>
-            <p className="text-sm text-ink-2 mt-1">Your request, the agent&apos;s choice and your confirmation are linked to the PayPal order.</p>
-            <Link href={`/receipt/${proposal.id}`} className="btn btn-primary w-full mt-4">
-              View your Intent Receipt
-            </Link>
-          </div>
-        )}
+              <p className="mt-2">
+                Nothing is ordered until you confirm, and the order can only be created for exactly what you confirmed.
+              </p>
+            </motion.div>
+          )}
+          {proposal && (
+            // Arrives from the conversation side, then its checks tick in order: the code-computed verdicts are the point.
+            <motion.div
+              key={proposal.id}
+              initial={{ opacity: 0, x: -16, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, transition: { duration: 0.12 } }}
+              transition={{ duration: 0.45, ease: EASE }}
+            >
+              <ConfirmationCard proposal={proposal} />
+            </motion.div>
+          )}
+          {proposal && phase === "proposed" && (
+            <motion.div key="actions" {...step} className="flex gap-2">
+              <button type="button" className={`btn flex-1 ${unmet ? "btn-warning" : "btn-primary"}`} onClick={confirm}>
+                {unmet ? "Confirm anyway" : "Confirm"}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={change}>
+                Change
+              </button>
+            </motion.div>
+          )}
+          {phase === "confirming" && (
+            <motion.p key="confirming" {...step} className="flex items-center gap-2 text-sm text-ink-3" role="status">
+              <Spinner /> Signing your confirmation…
+            </motion.p>
+          )}
+          {(phase === "pay" || phase === "capturing") && proposal && (
+            <motion.div key="pay" {...step} className="card p-4 space-y-3">
+              <p className="text-sm">
+                <Badge tone="success">Confirmed</Badge> <span className="ml-1">Signed into the ledger. Pay with PayPal (sandbox):</span>
+              </p>
+              {paypalClientId ? (
+                <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD", intent: "capture" }}>
+                  <PayPalLoading />
+                  <PayPalButtons
+                    style={{ layout: "vertical", label: "pay" }}
+                    disabled={phase === "capturing"}
+                    createOrder={createOrder}
+                    onApprove={async (data) => capture(data.orderID)}
+                    onCancel={() => setError("You cancelled the PayPal approval. Your confirmation is saved; you can pay when ready.")}
+                    onError={(err) => setError(`PayPal error: ${String((err as { message?: string })?.message ?? err)}`)}
+                  />
+                </PayPalScriptProvider>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-ink-3">
+                    PayPal sandbox credentials are not configured on this server, so checkout is simulated. The order is labelled SIMULATED
+                    everywhere.
+                  </p>
+                  <button type="button" className="btn btn-secondary w-full" onClick={simulatedCheckout} disabled={phase === "capturing"}>
+                    Simulated checkout <Badge tone="warning">Simulated</Badge>
+                  </button>
+                </div>
+              )}
+              {phase === "capturing" && (
+                <p className="flex items-center gap-2 text-sm text-ink-3" role="status">
+                  <Spinner /> Capturing payment…
+                </p>
+              )}
+            </motion.div>
+          )}
+          {phase === "done" && proposal && (
+            <motion.div key="done" {...step} className="card p-5 border-success/40" role="status">
+              <p className="font-semibold text-success">Payment captured</p>
+              <p className="text-sm text-ink-2 mt-1">
+                Your request, the agent&apos;s choice and your confirmation are linked to the PayPal order.
+              </p>
+              <Link href={`/receipt/${proposal.id}`} className="btn btn-primary w-full mt-4">
+                View your Intent Receipt
+                <ArrowIcon />
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {error && (
           <p role="alert" className="text-sm text-danger bg-danger-soft rounded-lg p-3">
             {error}
@@ -289,21 +331,33 @@ export function ShopClient({
   );
 }
 
+/** Holds the space while PayPal's SDK loads, so the pay step never shows an empty card. */
+function PayPalLoading() {
+  const [{ isPending }] = usePayPalScriptReducer();
+  if (!isPending) return null;
+  return (
+    <div className="space-y-2" role="status" aria-label="Loading PayPal checkout">
+      <div className="skeleton h-11" />
+      <div className="skeleton h-11" />
+    </div>
+  );
+}
+
 function ConfirmationCard({ proposal }: { proposal: Proposal }) {
   const s = proposal.record.selection;
   const [title, ...rest] = proposal.card;
   return (
     <div className="card overflow-hidden">
-      <div className="h-28 bg-gradient-to-br from-accent-soft to-neutral-soft flex items-center justify-center" aria-hidden>
+      <div className="h-28 bg-gradient-to-br from-accent-soft to-neutral-soft flex flex-col items-center justify-center gap-1">
+        <span className="text-sm font-semibold text-accent">Confirm this purchase</span>
         <span className="font-mono text-xs text-ink-3">{s.sku}</span>
       </div>
       <div className="p-5">
-        <p className="eyebrow">Confirm this purchase</p>
-        <h2 className="font-semibold text-lg mt-1">{title.text}</h2>
+        <h2 className="font-semibold text-lg">{title.text}</h2>
         <p className="text-2xl font-semibold mt-1">{money((s.price_cents * s.quantity) / 100, s.currency)}</p>
         <ul className="mt-3 space-y-1.5 text-sm">
           {rest.map((l, i) => (
-            <CardRow key={i} line={l} />
+            <CardRow key={i} line={l} delay={0.2 + Math.min(i, 12) * 0.045} />
           ))}
         </ul>
         <p className="mt-4 text-xs text-ink-3">The exact text above is hashed (SHA-256) and signed when you confirm.</p>
@@ -312,36 +366,58 @@ function ConfirmationCard({ proposal }: { proposal: Proposal }) {
   );
 }
 
-function CardRow({ line }: { line: CardLine }) {
+function CardRow({ line, delay }: { line: CardLine; delay: number }) {
+  const [className, content] = rowParts(line);
+  return (
+    <motion.li
+      className={className}
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, ease: EASE, delay }}
+    >
+      {content}
+    </motion.li>
+  );
+}
+
+function rowParts(line: CardLine): [string, ReactNode] {
   switch (line.kind) {
     case "warning":
-      return <li className="rounded-lg bg-warning-soft text-warning font-semibold px-3 py-2 my-2">{line.text}</li>;
+      return ["rounded-lg bg-warning-soft text-warning font-semibold px-3 py-2 my-2", line.text];
     case "heading":
-      return <li className="eyebrow pt-3">{line.text}</li>;
+      return ["eyebrow pt-3", line.text];
     case "met":
-      return (
-        <li className="flex gap-2">
+      return [
+        "flex gap-2",
+        <>
           <CheckIcon className="text-success mt-0.5 shrink-0" />
           <span>{line.text}</span>
-        </li>
-      );
+        </>,
+      ];
     case "unmet":
-      return (
-        <li className="flex gap-2 text-warning font-medium">
+      return [
+        "flex gap-2 text-warning font-medium",
+        <>
           <AlertIcon className="mt-0.5 shrink-0" />
           <span>{line.text}</span>
-        </li>
-      );
+        </>,
+      ];
     case "unknown":
-      return (
-        <li className="flex gap-2 text-ink-3">
-          <span aria-hidden>?</span>
+      return [
+        "flex gap-2 text-ink-3",
+        <>
+          <span
+            className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-current text-[10px] font-semibold"
+            aria-hidden
+          >
+            ?
+          </span>
           <span>{line.text}</span>
-        </li>
-      );
+        </>,
+      ];
     case "assumption":
-      return <li className="text-ink-2 pl-4 border-l-2 border-line">{line.text}</li>;
+      return ["text-ink-2 pl-4 border-l-2 border-line", line.text];
     default:
-      return <li className="text-ink-2">{line.text}</li>;
+      return ["text-ink-2", line.text];
   }
 }

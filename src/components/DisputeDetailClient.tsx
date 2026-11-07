@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
+import { EASE } from "./motion";
 import type { DisputeDetail } from "@/lib/views";
 import { ACTION_TONE, Badge, BusyLabel, CheckIcon, CopyHash, FAULT_TONE, SourceBadge, humanize, money, shortDate } from "./ui";
 
@@ -18,6 +20,9 @@ export function DisputeDetailClient({ initial }: { initial: DisputeDetail }) {
   const [d, setD] = useState(initial);
   const [elapsed, setElapsed] = useState(0);
   const analyzing = d.dispute.status === "ANALYZING" || d.dispute.status === "RECEIVED";
+  // Animate the analysis in only when the visitor watched it being produced (page opened while
+  // analyzing, or Retry). An analysis that is already there at load renders static.
+  const [watched, setWatched] = useState(analyzing);
 
   const refresh = useCallback(async () => {
     const res = await fetch(`/api/disputes/${d.dispute.id}`, { cache: "no-store" });
@@ -36,6 +41,7 @@ export function DisputeDetailClient({ initial }: { initial: DisputeDetail }) {
 
   async function retry() {
     await fetch(`/api/disputes/${d.dispute.id}/analyze`, { method: "POST" });
+    setWatched(true);
     setD({ ...d, dispute: { ...d.dispute, status: "ANALYZING", error: null } });
   }
 
@@ -55,7 +61,8 @@ export function DisputeDetailClient({ initial }: { initial: DisputeDetail }) {
             {d.dispute.scenario && <Badge tone="neutral">Scenario {d.dispute.scenario}</Badge>}
           </div>
           <p className="text-sm text-ink-2 mt-1">
-            <span className="font-mono">{d.dispute.paypal_dispute_id}</span> · {money(d.dispute.amount, d.dispute.currency)} · opened {shortDate(d.dispute.opened_at)}
+            <span className="font-mono">{d.dispute.paypal_dispute_id}</span> · {money(d.dispute.amount, d.dispute.currency)} · opened{" "}
+            {shortDate(d.dispute.opened_at)}
           </p>
           {d.dispute.scenarioInfo && <p className="text-sm text-ink-3 mt-1">What to look for: {d.dispute.scenarioInfo.lookFor}</p>}
         </div>
@@ -68,7 +75,7 @@ export function DisputeDetailClient({ initial }: { initial: DisputeDetail }) {
 
       <div className="grid lg:grid-cols-[1fr_1.2fr_1.2fr] gap-4 mt-5 items-start">
         <ThreadColumn d={d} />
-        <EvidenceColumn d={d} analyzing={analyzing} elapsed={elapsed} onRetry={retry} />
+        <EvidenceColumn d={d} analyzing={analyzing} elapsed={elapsed} onRetry={retry} fresh={watched} />
         <DecisionColumn key={a?.id ?? "none"} d={d} analyzing={analyzing} onDone={refresh} />
       </div>
     </div>
@@ -101,7 +108,10 @@ function ThreadColumn({ d }: { d: DisputeDetail }) {
       <p className="eyebrow mt-5 mb-2">Messages (untrusted)</p>
       <ul className="space-y-3">
         {d.messages.map((m) => (
-          <li key={m.id} className={`rounded-lg p-3 text-sm ${m.instruction_like ? "bg-danger-soft border border-danger/30" : "bg-neutral-soft"}`}>
+          <li
+            key={m.id}
+            className={`rounded-lg p-3 text-sm ${m.instruction_like ? "bg-danger-soft border border-danger/30" : "bg-neutral-soft"}`}
+          >
             <div className="flex justify-between text-xs text-ink-3 mb-1">
               <span>{humanize(m.author_role)}</span>
               <span>{shortDate(m.posted_at)}</span>
@@ -119,14 +129,28 @@ function ThreadColumn({ d }: { d: DisputeDetail }) {
       {d.intent && (
         <>
           <p className="eyebrow mt-5 mb-2">Card the buyer confirmed</p>
-          <pre className="whitespace-pre-wrap text-[12px] font-mono bg-paper border border-line rounded-lg p-3 leading-5">{d.intent.card}</pre>
+          <pre className="whitespace-pre-wrap text-[12px] font-mono bg-paper border border-line rounded-lg p-3 leading-5">
+            {d.intent.card}
+          </pre>
         </>
       )}
     </Col>
   );
 }
 
-function EvidenceColumn({ d, analyzing, elapsed, onRetry }: { d: DisputeDetail; analyzing: boolean; elapsed: number; onRetry: () => void }) {
+function EvidenceColumn({
+  d,
+  analyzing,
+  elapsed,
+  onRetry,
+  fresh,
+}: {
+  d: DisputeDetail;
+  analyzing: boolean;
+  elapsed: number;
+  onRetry: () => void;
+  fresh: boolean;
+}) {
   const a = d.analysis;
   const v = a?.validation;
   const total = v ? v.verified + v.failed : 0;
@@ -178,26 +202,38 @@ function EvidenceColumn({ d, analyzing, elapsed, onRetry }: { d: DisputeDetail; 
               {v!.dropped > 0 && <span className="text-warning font-normal"> · {v!.dropped} unverified citation(s) dropped</span>}
             </p>
             <ul className="space-y-2">
-              {a.output.evidence.map((e) => (
-                <li key={e.id} className="rounded-lg border border-line p-3 text-sm">
+              {a.output.evidence.map((e, i) => (
+                <motion.li
+                  key={e.id}
+                  className="rounded-lg border border-line p-3 text-sm"
+                  initial={fresh ? { opacity: 0, y: 8 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: EASE, delay: Math.min(i, 8) * 0.06 }}
+                >
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge tone="success">
                       <CheckIcon className="h-3 w-3" />
                       Verified
                     </Badge>
-                    <Badge tone={e.supports === "BUYER" ? "warning" : e.supports === "SELLER" ? "accent" : "neutral"}>Supports {e.supports.toLowerCase()}</Badge>
+                    <Badge tone={e.supports === "BUYER" ? "warning" : e.supports === "SELLER" ? "accent" : "neutral"}>
+                      Supports {e.supports.toLowerCase()}
+                    </Badge>
                   </div>
                   <p className="mt-1.5">{e.claim}</p>
                   <details className="mt-1.5 text-xs">
                     <summary className="cursor-pointer text-ink-3 hover:text-ink">
                       Show source <span className="font-mono">{e.pointer}</span>
                     </summary>
-                    <pre className="mt-1 whitespace-pre-wrap font-mono bg-paper border border-line rounded p-2 break-all">{JSON.stringify(e.source_value, null, 2)}</pre>
+                    <pre className="mt-1 whitespace-pre-wrap font-mono bg-paper border border-line rounded p-2 break-all">
+                      {JSON.stringify(e.source_value, null, 2)}
+                    </pre>
                   </details>
-                </li>
+                </motion.li>
               ))}
             </ul>
-            {v!.needs_human_review && <p className="mt-3 text-sm text-warning font-semibold">Needs human review: several citations failed verification twice.</p>}
+            {v!.needs_human_review && (
+              <p className="mt-3 text-sm text-warning font-semibold">Needs human review: several citations failed verification twice.</p>
+            )}
           </>
         )}
       </div>
@@ -271,7 +307,9 @@ function DecisionColumn({ d, analyzing, onDone }: { d: DisputeDetail; analyzing:
     <Col title="Decision" aside={a.cached ? <Badge tone="neutral">Cached</Badge> : <Badge tone="info">Live AI</Badge>}>
       <div className="flex flex-wrap gap-2">
         <Badge tone="neutral">{humanize(o.classification)}</Badge>
-        <Badge tone={FAULT_TONE[o.agent_fault]}>{o.agent_fault === "LIKELY" ? "Agent fault" : `Agent fault: ${o.agent_fault.toLowerCase()}`}</Badge>
+        <Badge tone={FAULT_TONE[o.agent_fault]}>
+          {o.agent_fault === "LIKELY" ? "Agent fault" : `Agent fault: ${o.agent_fault.toLowerCase()}`}
+        </Badge>
         <span className="text-xs text-ink-3 self-center">confidence {Math.round(o.confidence * 100)}%</span>
       </div>
       <p className="mt-3 text-sm">
@@ -313,43 +351,87 @@ function DecisionColumn({ d, analyzing, onDone }: { d: DisputeDetail; analyzing:
             ))}
           </select>
         </label>
-        {type === "MAKE_OFFER" && (
-          <label className="block text-sm">
-            <span className="eyebrow">Offer amount ({d.dispute.currency})</span>
-            <input className="field mt-1 w-full px-3 py-2 tabular-nums" value={offer} onChange={(e) => setOffer(e.target.value)} inputMode="decimal" />
-          </label>
-        )}
+        <AnimatePresence initial={false}>
+          {type === "MAKE_OFFER" && (
+            <motion.label
+              key="offer"
+              className="block text-sm overflow-hidden"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
+            >
+              <span className="eyebrow">Offer amount ({d.dispute.currency})</span>
+              <input
+                className="field mt-1 w-full px-3 py-2 tabular-nums"
+                value={offer}
+                onChange={(e) => setOffer(e.target.value)}
+                inputMode="decimal"
+              />
+            </motion.label>
+          )}
+        </AnimatePresence>
         <label className="block text-sm">
           <span className="eyebrow">Response to PayPal (editable draft)</span>
-          <textarea className="field mt-1 w-full px-3 py-2 min-h-28 text-sm" value={sellerText} onChange={(e) => setSellerText(e.target.value)} maxLength={2000} />
+          <textarea
+            className="field mt-1 w-full px-3 py-2 min-h-28 text-sm"
+            value={sellerText}
+            onChange={(e) => setSellerText(e.target.value)}
+            maxLength={2000}
+          />
         </label>
         <label className="block text-sm">
           <span className="eyebrow">Message to buyer (editable draft)</span>
-          <textarea className="field mt-1 w-full px-3 py-2 min-h-20 text-sm" value={buyerText} onChange={(e) => setBuyerText(e.target.value)} maxLength={2000} />
+          <textarea
+            className="field mt-1 w-full px-3 py-2 min-h-20 text-sm"
+            value={buyerText}
+            onChange={(e) => setBuyerText(e.target.value)}
+            maxLength={2000}
+          />
         </label>
-        {!previewOpen ? (
-          <button type="button" className="btn btn-primary w-full" onClick={() => setPreviewOpen(true)} disabled={!sellerText.trim() || d.dispute.status === "SUBMITTED"}>
-            {d.dispute.status === "SUBMITTED" ? "Action submitted" : "Review request…"}
-          </button>
-        ) : (
-          <div className="rounded-lg border border-line bg-paper p-3">
-            <p className="text-sm font-semibold">Exact PayPal request</p>
-            <pre className="mt-2 text-[11px] font-mono whitespace-pre-wrap break-all max-h-56 overflow-auto">
-              {`${preview.method} ${preview.path}\n${JSON.stringify(preview.body, null, 2)}`}
-            </pre>
-            {d.dispute.simulated && <p className="text-xs text-warning mt-2">This dispute is simulated: the request will be recorded but not sent.</p>}
-            <div className="flex gap-2 mt-3">
-              <button type="button" className="btn btn-primary flex-1" onClick={approve} disabled={sending} aria-busy={sending}>
-                <BusyLabel busy={sending} busyText="Sending…">
-                  {d.dispute.simulated ? "Approve (simulated send)" : "Approve & send"}
-                </BusyLabel>
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setPreviewOpen(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* The review step unfolds in place, so the request you approve stays next to the drafts it came from. */}
+        <AnimatePresence mode="wait" initial={false}>
+          {!previewOpen ? (
+            <motion.button
+              key="review"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.1 } }}
+              type="button"
+              className="btn btn-primary w-full"
+              onClick={() => setPreviewOpen(true)}
+              disabled={!sellerText.trim() || d.dispute.status === "SUBMITTED"}
+            >
+              {d.dispute.status === "SUBMITTED" ? "Action submitted" : "Review request…"}
+            </motion.button>
+          ) : (
+            <motion.div
+              key="preview"
+              className="rounded-lg border border-line bg-paper p-3 overflow-hidden"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
+              transition={{ duration: 0.32, ease: EASE }}
+            >
+              <p className="text-sm font-semibold">Exact PayPal request</p>
+              <pre className="mt-2 text-[11px] font-mono whitespace-pre-wrap break-all max-h-56 overflow-auto">
+                {`${preview.method} ${preview.path}\n${JSON.stringify(preview.body, null, 2)}`}
+              </pre>
+              {d.dispute.simulated && (
+                <p className="text-xs text-warning mt-2">This dispute is simulated: the request will be recorded but not sent.</p>
+              )}
+              <div className="flex gap-2 mt-3">
+                <button type="button" className="btn btn-primary flex-1" onClick={approve} disabled={sending} aria-busy={sending}>
+                  <BusyLabel busy={sending} busyText="Sending…">
+                    {d.dispute.simulated ? "Approve (simulated send)" : "Approve & send"}
+                  </BusyLabel>
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setPreviewOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {error && (
           <p role="alert" className="text-sm text-danger">
             {error}
@@ -361,27 +443,37 @@ function DecisionColumn({ d, analyzing, onDone }: { d: DisputeDetail; analyzing:
         <>
           <p className="eyebrow mt-5 mb-2">Action log</p>
           <ul className="space-y-2">
-            {d.actions.map((x) => (
-              <li key={x.id} className="text-sm border border-line rounded-lg p-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium">{humanize(x.type)}</span>
-                  <SourceBadge simulated={x.simulated} />
-                  <span className="text-xs text-ink-3">
-                    by {x.approved_by} · {shortDate(x.created_at)}
-                  </span>
-                </div>
-                <div className="text-xs font-mono text-ink-3 mt-1 break-all">
-                  {x.request_preview.method} {x.request_preview.path}
-                </div>
-              </li>
-            ))}
+            <AnimatePresence initial={false}>
+              {d.actions.map((x) => (
+                <motion.li
+                  key={x.id}
+                  className="text-sm border border-line rounded-lg p-2"
+                  initial={{ opacity: 0, y: -6, backgroundColor: "var(--success-soft)" }}
+                  animate={{ opacity: 1, y: 0, backgroundColor: "var(--surface)" }}
+                  transition={{ duration: 0.35, ease: EASE, backgroundColor: { duration: 1.6, ease: "easeOut" } }}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{humanize(x.type)}</span>
+                    <SourceBadge simulated={x.simulated} />
+                    <span className="text-xs text-ink-3">
+                      by {x.approved_by} · {shortDate(x.created_at)}
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono text-ink-3 mt-1 break-all">
+                    {x.request_preview.method} {x.request_preview.path}
+                  </div>
+                </motion.li>
+              ))}
+            </AnimatePresence>
           </ul>
         </>
       )}
 
       <p className="mt-5 text-xs text-ink-3">
-        {a.cached ? `Cached analysis: ${a.cache_origin}` : `Live analysis by ${a.provider}/${a.model} in ${((a.duration_ms ?? 0) / 1000).toFixed(1)} s`} · prompt {a.prompt_version} · input{" "}
-        <CopyHash value={a.input_sha256} chars={10} label="input hash" />
+        {a.cached
+          ? `Cached analysis: ${a.cache_origin}`
+          : `Live analysis by ${a.provider}/${a.model} in ${((a.duration_ms ?? 0) / 1000).toFixed(1)} s`}{" "}
+        · prompt {a.prompt_version} · input <CopyHash value={a.input_sha256} chars={10} label="input hash" />
       </p>
     </Col>
   );
