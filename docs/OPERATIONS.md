@@ -2,8 +2,9 @@
 
 ## Hosting (Render)
 
-- `render.yaml` defines one Node web service, `plan: starter` (paid, no sleep) so judges never hit a ~50 s free-tier cold start. Fund it with the Render hackathon credits (claim via the hackathon's Render sponsor page). **Owner: confirm the credit balance covers Nov 8 to Dec 15** (about 5.5 weeks of a starter instance) and record it here.
-- If credits are not available, switch to `plan: free` and add an external uptime ping every 10 minutes to `/api/health`; document the decision here.
+- `render.yaml` defines one Node web service on **`plan: free`** (decided 2026-11-07: Render asks for a card for paid Blueprint services, and none is on file). Free web services sleep after 15 minutes without traffic and take about a minute to wake.
+- **Keep-awake ping:** an external monitor (e.g. UptimeRobot or cron-job.org, both free) requests `https://<your-url>/api/health` every 10 minutes through Dec 15. One always-on free service uses about 720 of the workspace's 750 free instance hours a month, so it fits.
+- If Render hackathon credits arrive later, set `plan: starter` (no sleep, more memory) and drop the ping.
 - Health check: `GET /api/health` returns ledger status and whether PayPal/AI are configured.
 - **Disk is ephemeral.** The SQLite database is re-created and re-seeded (deterministically) on every deploy/restart. Orders made by judges may disappear after a restart; that is acceptable and expected. The signing key is in env, so receipts stay verifiable across restarts of the seeded history.
 - **Reset demo data** (public button on `/demo`) only removes simulated disputes, unconfirmed drafts and chats. Signed ledger entries, orders and real sandbox disputes are never deleted. A full wipe is CLI-only: `npm run seed -- --all`.
