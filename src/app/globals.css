@@ -1,15 +1,25 @@
 @import "tailwindcss";
 
-/* Design tokens (§11.1). Defined once; Tailwind utilities read them via @theme. */
+/* dark: utilities follow the data-theme attribute, not only the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens (§11.1). Defined once; Tailwind utilities read them via @theme.
+   Light is the default; [data-theme="dark"] is set before paint by the script in layout.tsx. */
 :root {
+  color-scheme: light;
   --ink: #14181f;
   --ink-2: #4a5160;
   --ink-3: #626976;
   --paper: #f7f5f0;
   --surface: #ffffff;
+  --surface-hover: #fbfaf7;
   --line: #e4e0d8;
+  --line-strong: #cfc9bd;
   --accent: #0b6b6a;
+  --accent-hover: #085756;
   --accent-soft: #e3f1f0;
+  /* Text on any strong fill (accent, ink, danger, warning). */
+  --on-strong: #ffffff;
   --success: #186b42;
   --success-soft: #e6f3ec;
   --warning: #925600;
@@ -19,6 +29,38 @@
   --info: #2457a6;
   --info-soft: #e7eef9;
   --neutral-soft: #eeece6;
+  --skeleton-a: #eeebe4;
+  --skeleton-b: #f6f4ef;
+  --row-hover: #f3f7f6;
+}
+
+/* Same warm paper world at night: deep ink-blue paper, cream ink, a lifted teal. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #ece8e1;
+  --ink-2: #bdb7ac;
+  --ink-3: #979187;
+  --paper: #121417;
+  --surface: #1a1d21;
+  --surface-hover: #20242a;
+  --line: #2b2f35;
+  --line-strong: #3b4048;
+  --accent: #4fc1ba;
+  --accent-hover: #6fd0ca;
+  --accent-soft: #14302f;
+  --on-strong: #111316;
+  --success: #62c78f;
+  --success-soft: #14291e;
+  --warning: #e3a94f;
+  --warning-soft: #2d2314;
+  --danger: #f2857b;
+  --danger-soft: #33191a;
+  --info: #84aef0;
+  --info-soft: #172338;
+  --neutral-soft: #25292f;
+  --skeleton-a: #22262b;
+  --skeleton-b: #2a2e34;
+  --row-hover: #1f2a2a;
 }
 
 @theme inline {
@@ -28,8 +70,10 @@
   --color-paper: var(--paper);
   --color-surface: var(--surface);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-on-strong: var(--on-strong);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -41,12 +85,13 @@
   --color-neutral-soft: var(--neutral-soft);
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  --radius-card: 10px;
-  --shadow-card: 0 1px 2px rgba(20, 24, 31, 0.04), 0 2px 8px rgba(20, 24, 31, 0.04);
+  --radius-card: 12px;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html {
   background: var(--paper);
+  scrollbar-color: var(--line-strong) var(--paper);
 }
 
 body {
@@ -54,6 +99,38 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  caret-color: var(--accent);
+}
+
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p,
+li,
+blockquote {
+  text-wrap: pretty;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
 }
 
 :focus-visible {
@@ -62,70 +139,147 @@ body {
   border-radius: 4px;
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+/* Component classes live in a layer so Tailwind utilities can override them. */
+@layer components {
+  /* One elevation: a hairline border on paper. */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+
+  .field {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink);
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  .field:hover:not(:disabled) {
+    border-color: var(--line-strong);
+  }
+  .field:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    transition:
+      background 150ms,
+      border-color 150ms,
+      color 150ms,
+      opacity 150ms,
+      transform 150ms var(--ease-out-expo);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px) scale(0.985);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn[aria-busy="true"] {
+    cursor: progress;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-strong);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .btn-warning {
+    background: var(--warning);
+    color: var(--on-strong);
+  }
+  .btn-warning:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--line-strong);
+    background: var(--surface-hover);
+  }
+  .btn-ghost {
+    color: var(--ink-2);
+    padding: 6px 10px;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--neutral-soft);
+  }
 }
 
-.eyebrow {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  font-weight: 600;
+/* Loaders */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 20px;
-  transition: background 120ms, border-color 120ms, opacity 120ms;
-  cursor: pointer;
-  white-space: nowrap;
+.typing span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ink-3);
+  animation: typing 1.2s ease-in-out infinite;
 }
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.typing span:nth-child(2) {
+  animation-delay: 150ms;
 }
-.btn-primary {
-  background: var(--accent);
-  color: white;
+.typing span:nth-child(3) {
+  animation-delay: 300ms;
 }
-.btn-primary:hover:not(:disabled) {
-  background: #085756;
-}
-.btn-warning {
-  background: var(--warning);
-  color: white;
-}
-.btn-secondary {
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line);
-}
-.btn-secondary:hover:not(:disabled) {
-  border-color: #cfc9bd;
-  background: #fbfaf7;
-}
-.btn-ghost {
-  color: var(--ink-2);
-  padding: 6px 10px;
-}
-.btn-ghost:hover {
-  color: var(--ink);
-  background: var(--neutral-soft);
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #eeebe4 25%, #f6f4ef 37%, #eeebe4 63%);
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 37%, var(--skeleton-a) 63%);
   background-size: 400% 100%;
   animation: skeleton 1.4s ease infinite;
   border-radius: 6px;
@@ -139,13 +293,62 @@ body {
   }
 }
 
+/* The one authored moment: the hero receipt prints its lines in order. */
+.print-in > * {
+  animation: print-in 520ms var(--ease-out-expo) backwards;
+}
+.print-in > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+.print-in > *:nth-child(3) {
+  animation-delay: 180ms;
+}
+.print-in > *:nth-child(4) {
+  animation-delay: 270ms;
+}
+.print-in > *:nth-child(5) {
+  animation-delay: 360ms;
+}
+@keyframes print-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+}
+
+.reveal {
+  animation: reveal 360ms var(--ease-out-expo) backwards;
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .skeleton {
+  .skeleton,
+  .print-in > *,
+  .reveal {
     animation: none;
+  }
+  .spinner {
+    animation-duration: 2s;
+  }
+  .typing span {
+    animation: none;
+    opacity: 0.6;
+  }
+  .btn:active:not(:disabled) {
+    transform: none;
   }
 }
 
 /* AG Grid: keep the grid inside our palette */
+.ir-grid {
+  font-variant-numeric: tabular-nums;
+}
 .ir-grid .ag-row {
   cursor: pointer;
 }
