@@ -108,7 +108,7 @@ To enable the real integrations, fill `.env`:
 | `GOOGLE_GENERATIVE_AI_API_KEY` | https://aistudio.google.com/apikey (free tier) |
 | `INTENT_SIGNING_KEY` | `npm run gen-keys` (optional in development: a dev key is generated in `data/`) |
 
-Sandbox buyer for PayPal checkout (sandbox only): **[add sandbox buyer email / password]**.
+Sandbox buyer for the PayPal checkout popup (PayPal **sandbox** test account, no real money): email `sb-wfdf953771758@personal.example.com`, password `n^6CD;M5`.
 
 Other commands: `npm run check` (typecheck + lint + tests) · `npm test` · `npm run e2e` (Playwright smoke + axe accessibility checks; first run `npx playwright install chromium`) · `npm run seed` (reset demo state; `-- --all` wipes everything) · `npm run smoke` (live sandbox checks) · `npm run ai-eval` (S1–S4 × 5 against the live model) · `npm run gen-fixtures`.
 

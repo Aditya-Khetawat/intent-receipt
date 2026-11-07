@@ -50,7 +50,7 @@ Attach an intent receipt to agent-initiated orders; feed receipts into dispute e
 
 ## Testing instructions
 - Hosted demo: [URL] → **Run guided demo**. No account needed.
-- Optional real checkout: PayPal sandbox buyer [email] / [password] (sandbox only, no real money).
+- Optional real checkout: PayPal sandbox buyer sb-wfdf953771758@personal.example.com / n^6CD;M5 (sandbox test account only, no real money).
 - Run locally: see README Quick start. 5-minute path: `docs/JUDGES.md`.
 
 **Built with:** typescript, next.js, tailwindcss, sqlite, paypal, paypal-orders-api, paypal-webhooks, paypal-disputes-api, paypal-agent-toolkit, gemini, vercel-ai-sdk, ag-grid, render, claude-code
