@@ -152,6 +152,21 @@ export function humanize(s: string | null | undefined) {
     .replace(/^\w/, (c) => c.toUpperCase());
 }
 
+/** PayPal's reason codes, in the words a merchant uses. */
+const REASON_LABEL: Record<string, string> = {
+  MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED: "Item not as described",
+  MERCHANDISE_OR_SERVICE_NOT_RECEIVED: "Item not received",
+  UNAUTHORISED: "Unauthorized payment",
+  CREDIT_NOT_PROCESSED: "Credit not processed",
+  DUPLICATE_TRANSACTION: "Duplicate transaction",
+  INCORRECT_AMOUNT: "Incorrect amount",
+  PAYMENT_BY_OTHER_MEANS: "Paid by other means",
+  CANCELED_RECURRING_BILLING: "Cancelled recurring billing",
+  PROBLEM_WITH_REMITTANCE: "Problem with remittance",
+  OTHER: "Other",
+};
+export const reasonLabel = (r: string) => REASON_LABEL[r] ?? humanize(r);
+
 export const ACTION_TONE: Record<string, BadgeTone> = {
   CONTEST: "accent",
   ACCEPT_AND_REFUND: "warning",

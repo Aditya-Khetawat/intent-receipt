@@ -72,11 +72,31 @@ export function disputeDetail(id: string) {
         const r = resolvePointer(context, e.pointer);
         return { ...e, source_value: r.found ? r.value : null };
       }) ?? [];
+  // Citations the code rejected stay inspectable: the claim, where it pointed and why it failed.
+  const failedReasons = new Map(a?.validation.items.filter((i) => !i.ok).map((i) => [i.id, i.reason ?? "did not match the source"]) ?? []);
+  const rejected =
+    a?.output.evidence
+      .filter((e) => failedReasons.has(e.id))
+      .map((e) => ({ id: e.id, claim: e.claim, pointer: e.pointer, reason: failedReasons.get(e.id)! })) ?? [];
   const recommendedAction = a ? actionForRecommendation(a.output.recommended_seller_action) : "PROVIDE_EVIDENCE";
   const previewFor = (type: ReturnType<typeof actionForRecommendation>) =>
-    buildActionRequest(d.paypal_dispute_id, { type, seller_text: a?.output.seller_response_draft ?? "", buyer_text: a?.output.buyer_message_draft, offer_amount: (d.amount_cents / 200).toFixed(2) }, d.currency);
+    buildActionRequest(
+      d.paypal_dispute_id,
+      {
+        type,
+        seller_text: a?.output.seller_response_draft ?? "",
+        buyer_text: a?.output.buyer_message_draft,
+        offer_amount: (d.amount_cents / 200).toFixed(2),
+      },
+      d.currency,
+    );
   const timeline = [
-    ...entriesForIntent(intent?.id ?? "").map((e) => ({ at: e.created_at, kind: "ledger", label: e.type, detail: `seq ${e.seq} · ${e.hash.slice(0, 12)}…` })),
+    ...entriesForIntent(intent?.id ?? "").map((e) => ({
+      at: e.created_at,
+      kind: "ledger",
+      label: e.type,
+      detail: `seq ${e.seq} · ${e.hash.slice(0, 12)}…`,
+    })),
     ...context.fulfillment.events.map((f) => ({ at: f.occurred_at, kind: "fulfillment", label: f.status, detail: f.detail })),
     { at: d.created_at, kind: "dispute", label: "DISPUTE_OPENED", detail: d.reason },
   ].sort((x, y) => x.at.localeCompare(y.at));
@@ -97,7 +117,15 @@ export function disputeDetail(id: string) {
     },
     messages: disputeMessages(d.id).map((m) => ({ ...m, instruction_like: detectInstructionLikeText(m.content) })),
     order: order && { ...order },
-    intent: intent && { id: intent.id, record: intent.record, card: intent.record.confirmation?.presented_text ?? confirmationCard(intent.record).map((l) => l.text).join("\n") },
+    intent: intent && {
+      id: intent.id,
+      record: intent.record,
+      card:
+        intent.record.confirmation?.presented_text ??
+        confirmationCard(intent.record)
+          .map((l) => l.text)
+          .join("\n"),
+    },
     ledgerOk: verifyLedger().ok,
     timeline,
     analysis: a && {
@@ -111,6 +139,7 @@ export function disputeDetail(id: string) {
       created_at: a.created_at,
       duration_ms: a.duration_ms,
       output: { ...a.output, evidence },
+      rejected,
       validation: a.validation,
     },
     recommendedAction,
@@ -156,6 +185,8 @@ export function merchantMetrics() {
     total: q.length,
     analyzed: analyzed.length,
     verifiedRatio: totalEv ? sum((r) => r.verified ?? 0) / totalEv : null,
+    citationsKept: sum((r) => r.verified ?? 0),
+    citationsTotal: totalEv,
     avgAnalysisMs: timed.length ? timed.reduce((s, r) => s + (r.analysis_ms ?? 0), 0) / timed.length : null,
     byAction,
     byClass,
@@ -177,7 +208,12 @@ export function ordersView() {
       const rec = JSON.parse(row.record_json);
       const { record_json: _omit, ...rest } = row;
       void _omit;
-      return { ...rest, simulated: row.simulated === 1, product: rec.selection.product_name as string, request: rec.request.verbatim as string };
+      return {
+        ...rest,
+        simulated: row.simulated === 1,
+        product: rec.selection.product_name as string,
+        request: rec.request.verbatim as string,
+      };
     }) as {
     id: string;
     intent_id: string;
