@@ -5,6 +5,7 @@ _Last updated: 2026-11-07_
 ## Done
 - **M0 bootstrap:** rules re-checked (`docs/RULES_CHECK.md`); Next.js 16 + TypeScript strict + Tailwind 4; MIT license; `.env.example`; `doctor`, `gen-keys`, `seed`, `smoke`, `gen-fixtures`, `ai-eval` scripts; `render.yaml`; `/api/health`. Public repo: github.com/Aditya-Khetawat/intent-receipt.
 - **M1 spikes (offline part):** PayPal Orders, Disputes and Webhooks facts verified from PayPal's OpenAPI specs; Agent Toolkit tools verified locally; AI SDK v7 tool loop and structured output verified with a mock model. Dispute mode **C** for now (`docs/PAYPAL_NOTES.md`).
+- **Live checks (2026-11-07):** PayPal sandbox OAuth, order + custom_id round-trip, Agent Toolkit get_order, buyer approval + capture; Groq gpt-oss-120b analyst (fixtures regenerated from live output, 24/24 citations verified; eval table in ARCHITECTURE).
 - **M2 buyer flow and receipts:** signed hash-chained ledger with tamper tests; deterministic constraint checker; shopping agent; hashed confirmation card; guard I1; Orders create/capture; receipt page with in-browser Verify (other receipts shared as redacted headers only); receipt JSON download.
 - **M3 disputes and analyst:** verified webhook endpoint with dedupe; one ingest path for real and simulated disputes; analyst with schema retry, citation validator, corrective re-run, CACHED fallback, ERROR + Retry.
 - **M4 console and demo:** AG Grid queue; dispute detail with verified evidence, balanced views, editable drafts, exact request preview, human approve; `/demo`; S1–S4 seeds; metrics; budget caps.
@@ -20,11 +21,11 @@ _Last updated: 2026-11-07_
 
 ## Blocked / needs owner
 - PayPal sandbox Client ID + Secret, sandbox buyer login, webhook ID (after deploy).
-- Groq API key (console.groq.com, free).
+
 - Render account + hackathon credits.
 
 ## Honest gaps
-- No live PayPal call or live model call has been made yet (no credentials).
-- CACHED fallback analyses are hand-authored until regenerated.
+- Groq free tier is 8K tokens/minute: concurrent visitors queue, and a busy minute falls back to CACHED analyses.
+- AI eval ran 3 runs per scenario (75% expected-action hit counting one rate-limited run).
 - Agent replies are not streamed token-by-token.
 - No login: merchant console and `/demo` are open by design for judges (sandbox + fictional data only).

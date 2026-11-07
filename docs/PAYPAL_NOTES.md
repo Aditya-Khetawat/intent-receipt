@@ -71,4 +71,5 @@ Verified by loading the package locally and dumping tool schemas (2026-11-07):
 | `@ai-sdk/google@4` exports `createGoogle`; its model id list includes `gemini-3.5-flash`, `gemini-flash-latest` | package type definitions | 2026-11-07 |
 | `@ai-sdk/groq@4` exports `createGroq`; model ids include `openai/gpt-oss-120b`; structured output uses `json_schema`, strict mode on by default (we turn it off because strict mode does not accept `min`/`max` keywords; zod validates the result) | package types + docs | 2026-11-07 |
 | Tool loop and structured output verified against AI SDK v7 with `MockLanguageModelV4` | `tests/ai-wiring.test.ts` | 2026-11-07 |
-| Free-tier limits and live tool-calling with `openai/gpt-oss-120b` on Groq | **PENDING KEY** (`npm run doctor`, `npm run ai-eval`) | |
+| Groq free tier for `openai/gpt-oss-120b`: 30 RPM, 1K RPD, 8K TPM, 200K TPD; 429 carries `retry-after` (seconds); output reservation counts toward TPM | console.groq.com/docs/rate-limits + live headers | 2026-11-07 |
+| Live structured output with `openai/gpt-oss-120b` (`npm run gen-fixtures`, `npm run ai-eval`) | live Groq | 2026-11-07 |
