@@ -7,8 +7,20 @@ import { toolkitGetOrder } from "../src/lib/paypal/toolkit";
 // Capture needs a buyer approval in the browser, so this verifies: OAuth, order
 // creation with custom_id, reading it back via REST and via the Agent Toolkit.
 // Optionally pass a hosted base URL to check /api/health: `npm run smoke -- https://x.onrender.com`
+// After approving the printed link as the sandbox buyer: `npm run smoke -- --capture <ORDER_ID>`
 
 async function main() {
+  const captureIdx = process.argv.indexOf("--capture");
+  if (captureIdx > -1) {
+    const id = process.argv[captureIdx + 1];
+    const res = await paypalFetch<{ status: string; purchase_units: { payments?: { captures?: { id: string; status: string }[] } }[] }>(
+      `/v2/checkout/orders/${encodeURIComponent(id)}/capture`,
+      { method: "POST", requestId: `smoke-capture-${id}` },
+    );
+    const cap = res.purchase_units[0]?.payments?.captures?.[0];
+    console.log(`capture: order ${res.status}, capture ${cap?.id} ${cap?.status}`);
+    return;
+  }
   const base = process.argv[2];
   if (base) {
     const h = await fetch(`${base.replace(/\/$/, "")}/api/health`).then((r) => r.json());
@@ -24,6 +36,10 @@ async function main() {
     requestId: `smoke-${Date.now()}`,
     body: {
       intent: "CAPTURE",
+      // Without return_url the hosted page just reloads after approval.
+      payment_source: {
+        paypal: { experience_context: { user_action: "PAY_NOW", return_url: `${env.appBaseUrl}/orders`, cancel_url: `${env.appBaseUrl}/orders` } },
+      },
       purchase_units: [
         {
           reference_id: "smoke",
@@ -40,7 +56,8 @@ async function main() {
   console.log(`custom_id round-trip: ${rest.purchase_units[0].custom_id === custom ? "OK" : "MISMATCH"}`);
   const tk = (await toolkitGetOrder(order.id)) as { id?: string; status?: string };
   console.log(`agent toolkit get_order: ${tk.id === order.id ? "OK" : "unexpected"} (${tk.status})`);
-  console.log(`approve in a browser (sandbox buyer) to test capture: ${order.links.find((l) => l.rel === "approve")?.href}`);
+  console.log(`approve in a browser (sandbox buyer) to test capture: ${order.links.find((l) => l.rel === "payer-action" || l.rel === "approve")?.href}`);
+  console.log(`then: npm run smoke -- --capture ${order.id}`);
 }
 
 main().catch((e) => {

@@ -8,7 +8,7 @@ Every fact below says how it was verified and when. "Spec" means PayPal's publis
 |---|---|---|
 | Sandbox base URL `https://api-m.sandbox.paypal.com`; OAuth2 client credentials at `POST /v1/oauth2/token` | code + PayPal docs | 2026-11-07 |
 | App refuses to run if `PAYPAL_ENV` is not `sandbox` (unless `ALLOW_PRODUCTION=true`, which we never set) | `src/lib/env.ts` | 2026-11-07 |
-| Live OAuth call | **PENDING SANDBOX** (`npm run doctor`) | |
+| Live OAuth call succeeds; Disputes API reachable with the app's credentials | live sandbox (`npm run doctor`) | 2026-11-07 |
 
 ## Orders v2
 
@@ -19,7 +19,9 @@ Every fact below says how it was verified and when. "Spec" means PayPal's publis
 | Capture: `POST /v2/checkout/orders/{id}/capture`; capture id at `purchase_units[].payments.captures[].id` | Spec + docs page | 2026-11-07 |
 | Idempotency via `PayPal-Request-Id` header (`ir-create-<intent>`, `ir-capture-<order>`) | code | 2026-11-07 |
 | We set `custom_id = "<intent_id>:<first 16 hex of INTENT_CONFIRMED hash>"` and `reference_id = <intent_id>` | `src/lib/paypal/orders.ts` | 2026-11-07 |
-| custom_id round-trips on GET order | **PENDING SANDBOX** (`npm run smoke`) | |
+| custom_id round-trips on GET order (REST and Agent Toolkit `get_order`) | live sandbox (`npm run smoke`) | 2026-11-07 |
+| Buyer approval then capture: order `APPROVED` → capture `COMPLETED` | live sandbox (`npm run smoke -- --capture <id>`) | 2026-11-07 |
+| Hosted checkout with no `return_url` reloads the same page after "Continue to Review Order" (the order is approved anyway); the smoke order now sets `return_url` and `user_action: PAY_NOW` | live sandbox | 2026-11-07 |
 
 ## PayPal Agent Toolkit (`@paypal/agent-toolkit@1.11.0`)
 
