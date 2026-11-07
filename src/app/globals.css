@@ -1,26 +1,151 @@
 @import "tailwindcss";
 
+/* Design tokens (§11.1). Defined once; Tailwind utilities read them via @theme. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #14181f;
+  --ink-2: #4a5160;
+  --ink-3: #757c89;
+  --paper: #f7f5f0;
+  --surface: #ffffff;
+  --line: #e4e0d8;
+  --accent: #0e7c7b;
+  --accent-soft: #e3f1f0;
+  --success: #1e7f4f;
+  --success-soft: #e6f3ec;
+  --warning: #b26a00;
+  --warning-soft: #fbf0df;
+  --danger: #b3261e;
+  --danger-soft: #f9e6e4;
+  --info: #2457a6;
+  --info-soft: #e7eef9;
+  --neutral-soft: #eeece6;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-neutral-soft: var(--neutral-soft);
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --radius-card: 10px;
+  --shadow-card: 0 1px 2px rgba(20, 24, 31, 0.04), 0 2px 8px rgba(20, 24, 31, 0.04);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+  transition: background 120ms, border-color 120ms, opacity 120ms;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #0b6766;
+}
+.btn-warning {
+  background: var(--warning);
+  color: white;
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: #cfc9bd;
+  background: #fbfaf7;
+}
+.btn-ghost {
+  color: var(--ink-2);
+  padding: 6px 10px;
+}
+.btn-ghost:hover {
+  color: var(--ink);
+  background: var(--neutral-soft);
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eeebe4 25%, #f6f4ef 37%, #eeebe4 63%);
+  background-size: 400% 100%;
+  animation: skeleton 1.4s ease infinite;
+  border-radius: 6px;
+}
+@keyframes skeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* AG Grid: keep the grid inside our palette */
+.ir-grid .ag-row {
+  cursor: pointer;
 }
