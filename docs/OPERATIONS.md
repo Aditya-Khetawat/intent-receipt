@@ -5,7 +5,8 @@
 - `render.yaml` defines one Node web service on **`plan: starter`** (paid, no sleep) so judges never hit a cold start or a data reset from sleeping. Decided 2026-11-07.
 - **Billing:** paid Blueprint services need a card on file. The $50 hackathon credit (claim at the hackathon's Render credits portal, then Render → Billing → Credit Balance → enter the promo code) is deducted at the end of each month; only an amount above the credit balance is charged to the card. Starter for Nov 8 to Dec 15 is roughly $9.
 - Fallback without credits: `plan: free` plus an external monitor (UptimeRobot or cron-job.org) requesting `/api/health` every 10 minutes. Free services sleep after 15 idle minutes, and waking resets the demo data.
-- Health check: `GET /api/health` returns ledger status and whether PayPal/AI are configured.
+- Health check: `GET /api/health` returns ledger status, whether PayPal/AI are configured, and real webhook counts (`received`, `verified`, `rejected` since the last restart).
+- To re-test webhooks: `POST /v1/notifications/webhooks-events/{event_id}/resend` with the webhook ID, then check the counts.
 - **Disk is ephemeral.** The SQLite database is re-created and re-seeded (deterministically) on every deploy/restart. Orders made by judges may disappear after a restart; that is acceptable and expected. The signing key is in env, so receipts stay verifiable across restarts of the seeded history.
 - **Reset demo data** (public button on `/demo`) only removes simulated disputes, unconfirmed drafts and chats. Signed ledger entries, orders and real sandbox disputes are never deleted. A full wipe is CLI-only: `npm run seed -- --all`.
 - **Do not redeploy between Dec 1 and Dec 15** except for rules-compliant fixes.
