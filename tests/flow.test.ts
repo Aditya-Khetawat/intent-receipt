@@ -13,6 +13,7 @@ import { validateEvidence } from "@/lib/ai/validator";
 import { approveAction } from "@/lib/disputes/actions";
 import { SCENARIOS } from "@/lib/disputes/scenarios";
 import type { Analysis } from "@/lib/ai/schemas";
+import { resetDemoData } from "@/lib/seed";
 import type { Constraint } from "@/lib/catalog/constraints";
 
 const draft = (constraints: Constraint[] = [{ key: "max_price", value: 85, source_turn: 0, confidence: 1 }]) =>
@@ -34,6 +35,27 @@ describe("seeding", () => {
     resetTestDb();
     const n = (getDb().prepare("SELECT COUNT(*) n FROM ledger").get() as { n: number }).n;
     expect(n).toBe(SCENARIOS.length * 3);
+    expect(verifyLedger().ok).toBe(true);
+  });
+});
+
+describe("demo reset", () => {
+  it("removes only simulated demo state and keeps the ledger and orders intact", async () => {
+    const db = resetTestDb();
+    const d = draft();
+    confirmIntent(d.id, cardText(confirmationCard(d.record)), "nonce-123");
+    const real = await simulateScenarioDispute("S1");
+    // Pretend one dispute is a real sandbox dispute: it must survive.
+    db.prepare("UPDATE disputes SET simulated = 0 WHERE id = ?").run(real);
+    await simulateScenarioDispute("S2");
+    const leftDraft = draft();
+    const before = (db.prepare("SELECT COUNT(*) n FROM ledger").get() as { n: number }).n;
+    resetDemoData(db);
+    const count = (sql: string) => (db.prepare(sql).get() as { n: number }).n;
+    expect(count("SELECT COUNT(*) n FROM ledger")).toBe(before);
+    expect(count("SELECT COUNT(*) n FROM disputes")).toBe(1);
+    expect(getIntent(leftDraft.id)).toBeNull();
+    expect(getIntent(d.id)?.status).toBe("CONFIRMED");
     expect(verifyLedger().ok).toBe(true);
   });
 });

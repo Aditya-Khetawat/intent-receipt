@@ -72,13 +72,33 @@ export function ensureSeeded(db: Database.Database): void {
   seedScenarios(db);
 }
 
-/** Wipe all demo data and re-seed. */
-export function resetDemoData(db: Database.Database): void {
-  db.exec(`
-    DELETE FROM actions; DELETE FROM analyses; DELETE FROM dispute_messages; DELETE FROM disputes;
-    DELETE FROM webhook_events; DELETE FROM fulfillment_events; DELETE FROM orders;
-    DELETE FROM ledger; DELETE FROM sqlite_sequence WHERE name = 'ledger';
-    DELETE FROM agent_messages; DELETE FROM intents; DELETE FROM agent_sessions;
-  `);
+/**
+ * Public "Reset demo data": removes only demo state (simulated disputes and their
+ * analyses/actions, simulated webhook events, unconfirmed drafts, chats). Signed
+ * ledger entries, orders and real sandbox disputes are never touched, so the chain
+ * stays intact and real records survive. `full` (CLI only) wipes everything.
+ */
+export function resetDemoData(db: Database.Database, opts: { full?: boolean } = {}): void {
+  if (opts.full) {
+    db.exec(`
+      DELETE FROM actions; DELETE FROM analyses; DELETE FROM dispute_messages; DELETE FROM disputes;
+      DELETE FROM webhook_events; DELETE FROM fulfillment_events; DELETE FROM orders;
+      DELETE FROM ledger; DELETE FROM sqlite_sequence WHERE name = 'ledger';
+      DELETE FROM agent_messages; DELETE FROM intents; DELETE FROM agent_sessions;
+    `);
+  } else {
+    db.transaction(() => {
+      const sim = "SELECT id FROM disputes WHERE simulated = 1";
+      db.exec(`
+        DELETE FROM actions WHERE dispute_id IN (${sim});
+        DELETE FROM analyses WHERE dispute_id IN (${sim});
+        DELETE FROM dispute_messages WHERE dispute_id IN (${sim});
+        DELETE FROM disputes WHERE simulated = 1;
+        DELETE FROM webhook_events WHERE simulated = 1;
+        DELETE FROM intents WHERE status IN ('DRAFT', 'CANCELLED');
+        DELETE FROM agent_messages; DELETE FROM agent_sessions;
+      `);
+    })();
+  }
   ensureSeeded(db);
 }

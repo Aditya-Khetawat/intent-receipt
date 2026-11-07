@@ -139,7 +139,10 @@ export function DemoRunner({
         </Step>
 
         <Step n={5} title="Reset demo data">
-          <p>Restores the seeded orders and removes disputes and chats, so the next visitor starts clean.</p>
+          <p>
+            Removes simulated disputes, unconfirmed drafts and chats so the next visitor starts clean. Signed receipts, real sandbox orders and real
+            disputes are kept.
+          </p>
           <button type="button" className="btn btn-secondary mt-3" onClick={reset} disabled={busy !== null}>
             {busy === "reset" ? "Resetting…" : "Reset demo data"}
           </button>
