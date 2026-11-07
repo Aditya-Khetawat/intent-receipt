@@ -1,6 +1,7 @@
 import { json } from "@/lib/http";
 import { pickWebhookHeaders, verifyWebhook } from "@/lib/paypal/webhooks";
-import { HANDLED_EVENTS, processWebhookEvent, recordWebhookEvent, webhookEventSchema } from "@/lib/disputes/ingest";
+import { HANDLED_EVENTS, processWebhookEvent, recordWebhookEvent, rejectedWebhooks, webhookEventSchema } from "@/lib/disputes/ingest";
+import { nowIso } from "@/lib/db";
 
 export async function POST(req: Request) {
   let raw: unknown;
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
   const v = await verifyWebhook(pickWebhookHeaders(req.headers), raw);
   if (!v.verified && !v.skipped) {
     console.warn(`[intentreceipt] rejected webhook ${parsed.data.id}: ${v.reason}`);
+    rejectedWebhooks.count++;
+    rejectedWebhooks.lastAt = nowIso();
     return json({ error: "signature verification failed" }, 400);
   }
   const fresh = recordWebhookEvent(parsed.data, v.verified, false);

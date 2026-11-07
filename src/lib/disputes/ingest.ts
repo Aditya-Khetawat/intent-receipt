@@ -36,6 +36,17 @@ const disputeResourceSchema = z
 
 export const HANDLED_EVENTS = ["PAYMENT.CAPTURE.COMPLETED", "CUSTOMER.DISPUTE.CREATED", "CUSTOMER.DISPUTE.UPDATED", "CUSTOMER.DISPUTE.RESOLVED"];
 
+// Rejected deliveries are never stored, so count them in memory (resets on restart).
+export const rejectedWebhooks = { count: 0, lastAt: null as string | null };
+
+/** Real (non-simulated) webhook deliveries, for /api/health. */
+export function webhookStats() {
+  const row = getDb()
+    .prepare("SELECT COUNT(*) AS received, COALESCE(SUM(verified), 0) AS verified, MAX(received_at) AS lastAt FROM webhook_events WHERE simulated = 0")
+    .get() as { received: number; verified: number; lastAt: string | null };
+  return { ...row, rejected: rejectedWebhooks.count, lastRejectedAt: rejectedWebhooks.lastAt };
+}
+
 /** Records the event once (PayPal retries; dedupe on event id). Returns false for duplicates. */
 export function recordWebhookEvent(event: WebhookEvent, verified: boolean, simulated: boolean): boolean {
   const res = getDb()
