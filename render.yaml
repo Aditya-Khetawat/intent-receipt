@@ -4,7 +4,7 @@ services:
   - type: web
     name: intentreceipt
     runtime: node
-    plan: free # no card needed; kept awake by an external ping to /api/health (docs/OPERATIONS.md)
+    plan: starter # paid instance (covered by the $50 hackathon credits) so judges never hit a cold start
     region: oregon
     buildCommand: npm ci && npm run build
     startCommand: npm start
