@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type GridApi, type ICellRendererParams } from "ag-grid-community";
 import type { QueueRow } from "@/lib/views";
-import { ACTION_TONE, Badge, BusyLabel, FAULT_TONE, SourceBadge, Spinner, humanize, money, shortDate } from "./ui";
+import { ACTION_TONE, Badge, BusyLabel, SourceBadge, Spinner, humanize, money, reasonLabel, shortDate } from "./ui";
 import { simulateDispute } from "./SimulateDisputeButton";
 import { AnimatedNumber, EASE, SLIDE } from "./motion";
 
@@ -41,6 +41,8 @@ interface Metrics {
   total: number;
   analyzed: number;
   verifiedRatio: number | null;
+  citationsKept: number;
+  citationsTotal: number;
   avgAnalysisMs: number | null;
   byAction: Record<string, number>;
   byClass: Record<string, number>;
@@ -60,82 +62,99 @@ interface OrderRowView {
   created_at: string;
 }
 
-const SORT_KEY = "ir.merchant.sort";
+const SORT_KEY = "ir.merchant.sort.v2";
+const TABS = ["queue", "orders", "metrics"] as const;
 
 const StatusCell = (p: ICellRendererParams<QueueRow>) => {
   const s = p.data?.status;
-  if (!s) return null;
+  if (!s || !p.data) return null;
   const tone =
     s === "READY_FOR_REVIEW" ? "accent" : s === "ERROR" ? "danger" : s === "SUBMITTED" || s === "RESOLVED" ? "success" : "neutral";
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="flex flex-wrap items-center gap-1.5 h-full">
       {(s === "ANALYZING" || s === "RECEIVED") && <span className="h-2 w-2 rounded-full bg-accent animate-pulse" aria-hidden />}
       <Badge tone={tone}>{humanize(s)}</Badge>
+      <SourceBadge simulated={p.data.simulated} cached={p.data.cached} />
     </span>
   );
 };
 
+const FAULT_SHORT: Record<string, string> = { POSSIBLE: "possible agent fault", LIKELY: "agent at fault" };
+const dash = <span className="text-ink-3">—</span>;
+
+// Two-line cells keep the queue to seven columns, so nothing (the SIMULATED label included) hides off-screen at 1280px.
 const columns: ColDef<QueueRow>[] = [
-  { field: "paypal_dispute_id", headerName: "Dispute", width: 185, cellClass: "font-mono text-[12px]" },
-  { field: "buyer", headerName: "Buyer", width: 130 },
-  { field: "amount", headerName: "Amount", width: 100, valueFormatter: (p) => money(p.value ?? 0, p.data?.currency) },
   {
-    field: "reason",
-    headerName: "PayPal reason",
-    width: 160,
-    valueFormatter: (p) => humanize(String(p.value ?? "").replace("MERCHANDISE_OR_SERVICE_", "")),
+    field: "opened_at",
+    headerName: "Dispute",
+    flex: 1.5,
+    minWidth: 230,
+    sort: "desc",
+    getQuickFilterText: (p) => `${p.data?.buyer} ${p.data?.product} ${p.data?.paypal_dispute_id}`,
+    cellRenderer: (p: ICellRendererParams<QueueRow>) =>
+      p.data ? (
+        <span className="flex flex-col justify-center h-full leading-tight min-w-0">
+          <Link href={`/merchant/disputes/${p.data.id}`} tabIndex={-1} className="font-medium truncate hover:text-accent">
+            {p.data.buyer} · {p.data.product}
+          </Link>
+          <span className="text-xs text-ink-3 truncate">
+            <span className="font-mono">{p.data.paypal_dispute_id}</span> · {shortDate(p.data.opened_at)}
+          </span>
+        </span>
+      ) : null,
   },
+  { field: "amount", headerName: "Amount", width: 100, valueFormatter: (p) => money(p.value ?? 0, p.data?.currency) },
+  { field: "reason", headerName: "PayPal reason", width: 175, valueFormatter: (p) => reasonLabel(String(p.value ?? "")) },
   {
     field: "classification",
-    headerName: "Classification",
-    width: 225,
+    headerName: "Analysis",
+    flex: 1,
+    minWidth: 215,
+    getQuickFilterText: (p) => `${humanize(p.value)} ${p.data?.agent_fault ? (FAULT_SHORT[p.data.agent_fault] ?? "") : ""}`,
     cellRenderer: (p: ICellRendererParams<QueueRow>) =>
-      p.value ? <Badge tone="neutral">{humanize(p.value)}</Badge> : <span className="text-ink-3">—</span>,
+      p.value ? (
+        <span className="flex flex-col justify-center items-start h-full gap-0.5 leading-tight">
+          <Badge tone="neutral">{humanize(p.value)}</Badge>
+          {p.data?.agent_fault && FAULT_SHORT[p.data.agent_fault] && (
+            <span className={`text-xs ${p.data.agent_fault === "LIKELY" ? "text-danger" : "text-warning"}`}>
+              {FAULT_SHORT[p.data.agent_fault]}
+            </span>
+          )}
+        </span>
+      ) : (
+        dash
+      ),
   },
   {
     field: "confidence",
     headerName: "Confidence",
-    width: 130,
+    width: 120,
     cellRenderer: (p: ICellRendererParams<QueueRow>) =>
       p.value === null || p.value === undefined ? (
-        <span className="text-ink-3">—</span>
+        dash
       ) : (
-        <span className="flex items-center gap-2 h-full" aria-label={`${Math.round(p.value * 100)} percent`}>
-          <span className="h-1.5 w-16 rounded bg-neutral-soft overflow-hidden">
+        <span className="flex items-center gap-2 h-full">
+          <span className="h-1.5 w-12 rounded bg-neutral-soft overflow-hidden" aria-hidden>
             <span className="block h-full bg-accent" style={{ width: `${Math.round(p.value * 100)}%` }} />
           </span>
-          <span className="text-xs">{Math.round(p.value * 100)}%</span>
+          <span className="text-xs tabular-nums">{Math.round(p.value * 100)}%</span>
         </span>
-      ),
-  },
-  {
-    field: "agent_fault",
-    headerName: "Agent fault",
-    width: 130,
-    cellRenderer: (p: ICellRendererParams<QueueRow>) =>
-      p.value ? (
-        <Badge tone={FAULT_TONE[p.value] ?? "neutral"}>{p.value === "LIKELY" ? "Agent fault" : humanize(p.value)}</Badge>
-      ) : (
-        <span className="text-ink-3">—</span>
       ),
   },
   {
     field: "recommended_action",
     headerName: "Recommended",
-    width: 190,
+    width: 165,
     cellRenderer: (p: ICellRendererParams<QueueRow>) =>
-      p.value ? <Badge tone={ACTION_TONE[p.value] ?? "neutral"}>{humanize(p.value)}</Badge> : <span className="text-ink-3">—</span>,
+      p.value ? <Badge tone={ACTION_TONE[p.value] ?? "neutral"}>{humanize(p.value)}</Badge> : dash,
   },
-  { field: "status", headerName: "Status", width: 170, cellRenderer: StatusCell },
   {
-    headerName: "Source",
-    colId: "source",
-    width: 190,
-    valueGetter: (p) => `${p.data?.simulated ? "SIMULATED" : "REAL"}${p.data?.cached ? " CACHED" : ""}`,
-    cellRenderer: (p: ICellRendererParams<QueueRow>) =>
-      p.data ? <SourceBadge simulated={p.data.simulated} cached={p.data.cached} /> : null,
+    field: "status",
+    headerName: "Status",
+    width: 215,
+    getQuickFilterText: (p) => `${humanize(p.value)} ${p.data?.simulated ? "simulated" : "real sandbox"}${p.data?.cached ? " cached" : ""}`,
+    cellRenderer: StatusCell,
   },
-  { field: "opened_at", headerName: "Opened", width: 160, valueFormatter: (p) => (p.value ? shortDate(p.value) : ""), sort: "desc" },
 ];
 
 export function MerchantConsole({
@@ -157,6 +176,22 @@ export function MerchantConsole({
   const [api, setApi] = useState<GridApi<QueueRow> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const quickRef = useRef<HTMLInputElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const open = useCallback((id: string) => router.push(`/merchant/disputes/${id}`), [router]);
+
+  // "/" jumps to the filter, as in most queues.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (e.key !== "/" || t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName)) return;
+      e.preventDefault();
+      setTab("queue");
+      requestAnimationFrame(() => quickRef.current?.focus());
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -212,6 +247,21 @@ export function MerchantConsole({
     }
   }
 
+  function onTabKey(e: ReactKeyboardEvent) {
+    const i = TABS.indexOf(tab);
+    const keys: Record<string, number> = {
+      ArrowRight: (i + 1) % TABS.length,
+      ArrowLeft: (i + TABS.length - 1) % TABS.length,
+      Home: 0,
+      End: TABS.length - 1,
+    };
+    const next = keys[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    setTab(TABS[next]);
+    tabRefs.current[TABS[next]]?.focus();
+  }
+
   const defaultColDef = useMemo<ColDef>(() => ({ sortable: true, filter: true, resizable: true }), []);
   const contest = metrics.byAction.CONTEST ?? 0;
   const accept = metrics.byAction.ACCEPT_AND_REFUND ?? 0;
@@ -227,34 +277,54 @@ export function MerchantConsole({
       </div>
 
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
-        <Kpi label="Open disputes" value={<AnimatedNumber value={metrics.open} />} />
+        <Kpi label="Open disputes" value={<AnimatedNumber value={metrics.open} />} hint={`of ${metrics.total} in the queue`} />
         <Kpi
           label="Avg time to analysis"
           value={metrics.avgAnalysisMs === null ? "—" : <AnimatedNumber value={metrics.avgAnalysisMs / 1000} format={fmtSeconds} />}
           hint="live runs only"
         />
         <Kpi
-          label="Evidence verified"
-          value={metrics.verifiedRatio === null ? "—" : <AnimatedNumber value={metrics.verifiedRatio * 100} format={fmtPercent} />}
-          hint="citations shown after validation"
+          label="Citations kept"
+          value={
+            metrics.citationsTotal === 0 ? (
+              "—"
+            ) : (
+              <>
+                <AnimatedNumber value={metrics.citationsKept} /> <span className="text-base font-normal text-ink-3">of</span>{" "}
+                <AnimatedNumber value={metrics.citationsTotal} />
+              </>
+            )
+          }
+          hint={
+            metrics.citationsTotal === 0
+              ? "after the code check"
+              : `${metrics.citationsTotal - metrics.citationsKept} rejected by code, never shown`
+          }
         />
         <Kpi
-          label="Contest vs refund"
+          label="Contest / refund"
           value={
             <>
               <AnimatedNumber value={contest} /> / <AnimatedNumber value={accept} />
             </>
           }
-          hint={`${metrics.agentFault} with agent fault`}
+          hint={`AI recommendations · ${metrics.agentFault} agent at fault`}
         />
       </dl>
 
-      <div role="tablist" aria-label="Console sections" className="mt-6 flex gap-1 border-b border-line">
-        {(["queue", "orders", "metrics"] as const).map((t) => (
+      <div role="tablist" aria-label="Console sections" className="mt-6 flex gap-1 border-b border-line" onKeyDown={onTabKey}>
+        {TABS.map((t) => (
           <button
             key={t}
+            ref={(el) => {
+              tabRefs.current[t] = el;
+            }}
+            id={`tab-${t}`}
             role="tab"
+            type="button"
             aria-selected={tab === t}
+            aria-controls="console-panel"
+            tabIndex={tab === t ? 0 : -1}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${tab === t ? "text-ink" : "text-ink-3 hover:text-ink"}`}
             onClick={() => setTab(t)}
           >
@@ -274,7 +344,9 @@ export function MerchantConsole({
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={tab}
+          id="console-panel"
           role="tabpanel"
+          aria-labelledby={`tab-${tab}`}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, transition: { duration: 0.1 } }}
@@ -287,9 +359,10 @@ export function MerchantConsole({
                   Filter disputes
                 </label>
                 <input
+                  ref={quickRef}
                   id="quick"
                   className="field px-3 py-2 text-sm w-full sm:w-72"
-                  placeholder="Quick filter (buyer, reason, action…)"
+                  placeholder="Filter by buyer, reason, action…   ( / )"
                   value={quick}
                   onChange={(e) => setQuick(e.target.value)}
                 />
@@ -314,8 +387,9 @@ export function MerchantConsole({
                   {error && <p className="text-sm text-danger mt-2">{error}</p>}
                 </div>
               ) : (
-                <div className="ir-grid h-[460px]">
+                <div className={`ir-grid ${rows.length > 8 ? "h-[520px]" : ""}`}>
                   <AgGridReact<QueueRow>
+                    domLayout={rows.length > 8 ? "normal" : "autoHeight"}
                     theme={gridTheme}
                     rowData={rows}
                     columnDefs={columns}
@@ -324,8 +398,15 @@ export function MerchantConsole({
                     quickFilterText={quick}
                     onGridReady={onGridReady}
                     onSortChanged={onSortChanged}
-                    onRowClicked={(e) => e.data && router.push(`/merchant/disputes/${e.data.id}`)}
-                    rowHeight={44}
+                    onRowClicked={(e) => e.data && open(e.data.id)}
+                    onCellKeyDown={(e) => {
+                      const k = (e.event as KeyboardEvent | null)?.key;
+                      if ((k === "Enter" || k === " ") && e.data) {
+                        e.event?.preventDefault();
+                        open(e.data.id);
+                      }
+                    }}
+                    rowHeight={56}
                     animateRows
                   />
                 </div>
@@ -403,8 +484,10 @@ function MetricsPanel({ metrics }: { metrics: Metrics }) {
   return (
     <div className="mt-4 grid md:grid-cols-3 gap-4">
       <div className="card p-5">
-        <h3 className="font-semibold">Verified-evidence ratio</h3>
-        <p className="text-sm text-ink-3">Share of analyst citations that matched source data after validation.</p>
+        <h3 className="font-semibold">Citations kept by the code check</h3>
+        <p className="text-sm text-ink-3">
+          {metrics.citationsKept} of {metrics.citationsTotal} analyst citations matched the record they pointed at.
+        </p>
         <p className="text-4xl font-semibold tracking-tight mt-4 text-success">
           {pct === null ? "—" : <AnimatedNumber value={pct} format={fmtPercent} />}
         </p>
@@ -417,7 +500,7 @@ function MetricsPanel({ metrics }: { metrics: Metrics }) {
             transition={{ duration: 0.7, ease: EASE, delay: 0.08 }}
           />
         </div>
-        <p className="text-xs text-ink-3 mt-3">Unverified citations are never shown; they are dropped and counted.</p>
+        <p className="text-xs text-ink-3 mt-3">The rest were rejected and never shown to you; each dispute lists them with the reason.</p>
       </div>
       <Bars
         title="Recommended actions"
