@@ -6,7 +6,7 @@ When an AI agent buys something for you, IntentReceipt records exactly what you 
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-0E7C7B.svg)](LICENSE) ![PayPal sandbox](https://img.shields.io/badge/PayPal-sandbox-2457A6.svg) ![Tests](https://img.shields.io/badge/tests-47%20unit%20%2B%208%20e2e-1E7F4F.svg)
 
-- **Live demo:** [add Render URL] → click **Run guided demo** (no account needed)
+- **Live demo:** [intentreceipt.onrender.com](https://intentreceipt.onrender.com) → click **Run guided demo** (no account needed)
 - **Video (2:40):** [add YouTube link]
 - **Judges' 5-minute path:** [docs/JUDGES.md](docs/JUDGES.md)
 
@@ -47,7 +47,7 @@ AI agents are starting to shop for people. When an agent-made purchase goes wron
 | Checkout (create, approve, capture) | **Real PayPal sandbox** when credentials are configured. Without credentials (e.g. a fresh clone) the same code path creates a `SIM-` order, labelled **SIMULATED**. |
 | Seeded order history (S1–S4) | **SIMULATED** orders, but their ledger entries are produced and signed by the real ledger code, so Verify passes. |
 | Disputes | Real webhooks are verified and ingested (REAL SANDBOX badge). PayPal has **no API to create disputes**, so the demo disputes are PayPal-shaped payloads sent through the **same ingest function**, labelled **SIMULATED**; actions on them are recorded with the exact request but **not sent**. |
-| Analyses | Live model output when a key is configured. Otherwise the seeded scenarios fall back to stored analyses labelled **CACHED** with their origin. [Currently the stored fallbacks are hand-authored and say so; `npm run gen-fixtures` replaces them with real model output.] |
+| Analyses | Live model output when a key is configured. Otherwise the seeded scenarios fall back to stored analyses labelled **CACHED** with their origin. The stored fallbacks were generated from a live `openai/gpt-oss-120b` run (`npm run gen-fixtures`) and keep only verified evidence. |
 
 **Limitations.** Sandbox only; no production credentials; no real AP2 cryptographic mandates (the design is *inspired by* PayPal's AP2 mandate-linked receipts, not an implementation of AP2); the ledger is **tamper-evident** (hash chain + signature), not tamper-proof and not a blockchain; no user accounts (demo personas); single currency (USD); no email; the analyst recommends but does not adjudicate liability. Agent replies are not streamed token-by-token.
 

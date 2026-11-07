@@ -2,7 +2,7 @@
 
 No account needed. Everything simulated or cached is labelled on screen.
 
-1. **Open the hosted URL** (see README). The landing page explains the problem; click **Run guided demo**.
+1. **Open https://intentreceipt.onrender.com**. The landing page explains the problem; click **Run guided demo**.
 2. **Buyer** (`/shop`): the S1 request is prefilled. The agent searches the fictional catalog and proposes one item. The confirmation card shows a constraint check computed by code. Click **Confirm**, then pay with the PayPal sandbox button (sandbox buyer login is in the README). You land on a button to the **Intent Receipt**.
 3. **Receipt** (`/receipt/...`): press **Verify**. Your browser recomputes every SHA-256 hash and checks the Ed25519 signatures. Download the receipt JSON if you like.
 4. **Dispute** (`/demo`, step 3): trigger **S1**. A PayPal-shaped dispute event goes through the same ingest as a real webhook. The analyst runs.

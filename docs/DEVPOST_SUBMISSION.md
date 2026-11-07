@@ -49,9 +49,9 @@ Real AP2-style cryptographic mandates; issuer and network signals; multi-merchan
 Attach an intent receipt to agent-initiated orders; feed receipts into dispute evidence and seller-protection decisions; give agent developers a feedback signal; give merchants a clear basis to accept agent traffic instead of blocking it.
 
 ## Testing instructions
-- Hosted demo: [URL] → **Run guided demo**. No account needed.
+- Hosted demo: https://intentreceipt.onrender.com → **Run guided demo**. No account needed.
 - Optional real checkout: PayPal sandbox buyer sb-wfdf953771758@personal.example.com / n^6CD;M5 (sandbox test account only, no real money).
 - Run locally: see README Quick start. 5-minute path: `docs/JUDGES.md`.
 
 **Built with:** typescript, next.js, tailwindcss, sqlite, paypal, paypal-orders-api, paypal-webhooks, paypal-disputes-api, paypal-agent-toolkit, groq, gpt-oss, vercel-ai-sdk, ag-grid, render, claude-code
-**Links:** [repo] · [hosted demo] · [YouTube video]
+**Links:** https://github.com/Aditya-Khetawat/intent-receipt · https://intentreceipt.onrender.com · [YouTube video]
