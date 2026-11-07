@@ -49,9 +49,11 @@ function hit(key: string, limit: number, windowMs: number, now: number): boolean
 /** Per-IP limit plus a global cap per bucket (10x), so a spoofed or shared IP cannot exceed it. */
 export function rateLimit(req: Request, bucket: string, limit: number, windowMs = 60_000): NextResponse | null {
   const now = Date.now();
-  const okIp = hit(`${bucket}:ip:${clientIp(req.headers)}`, limit, windowMs, now);
-  const okGlobal = hit(`${bucket}:global`, limit * 10, windowMs, now);
-  if (!okIp || !okGlobal) return json({ error: "Too many requests. Please wait a minute." }, 429);
+  const tooMany = () => json({ error: "Too many requests. Please wait a minute." }, 429);
+  // Only requests that pass the per-IP check count toward the global cap, so one
+  // throttled client cannot exhaust it for everyone else.
+  if (!hit(`${bucket}:ip:${clientIp(req.headers)}`, limit, windowMs, now)) return tooMany();
+  if (!hit(`${bucket}:global`, limit * 10, windowMs, now)) return tooMany();
   return null;
 }
 

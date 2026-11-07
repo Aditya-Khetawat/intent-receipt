@@ -28,6 +28,11 @@ describe("rateLimit", () => {
     expect(statuses).toEqual([200, 200, 200, 429]);
   });
 
+  it("does not let one throttled client use up the global cap", () => {
+    for (let i = 0; i < 50; i++) rateLimit(req("203.0.113.9"), "d", 2);
+    expect(rateLimit(req("198.51.100.1"), "d", 2)).toBeNull();
+  });
+
   it("enforces a global cap per bucket", () => {
     const statuses = Array.from({ length: 11 }, (_, i) => rateLimit(req(`203.0.113.${i}`), "g", 1)?.status ?? 200);
     expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
