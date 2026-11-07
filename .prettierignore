@@ -1,0 +1,6 @@
+.next
+node_modules
+data
+.cache-specs
+package-lock.json
+HACKATHON_BRIEF.md

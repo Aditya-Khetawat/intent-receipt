@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IntentReceipt
+/data/
+!.env.example
+/test-results/
+/playwright-report/
+/.cache-specs/
+/.claude/
