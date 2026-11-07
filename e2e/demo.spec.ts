@@ -27,12 +27,34 @@ test("receipt verifies in the browser", async ({ page }) => {
   await expect(page.getByText(/Chain intact, \d+ entries, signed by/)).toBeVisible();
 });
 
-for (const path of ["/", "/shop", "/demo", "/orders", "/merchant", "/receipt/ir_seed_s2_cable1m"]) {
-  test(`no serious accessibility violations on ${path}`, async ({ page }) => {
-    await page.goto(path);
-    await page.waitForLoadState("networkidle");
-    const results = await new AxeBuilder({ page }).analyze();
-    const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-    expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`)).toEqual([]);
-  });
-}
+test("theme toggle switches to dark and persists across a reload", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+for (const colorScheme of ["light", "dark"] as const)
+  for (const path of ["/", "/shop", "/demo", "/orders", "/merchant", "/receipt/ir_seed_s2_cable1m"]) {
+    test(`no serious accessibility violations on ${path} (${colorScheme})`, async ({ page }) => {
+      // The OS setting picks the theme when nothing is saved; reduced motion keeps entrance animations from skewing contrast.
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      await expect(page.locator("html")).toHaveAttribute("data-theme", colorScheme);
+      const results = await new AxeBuilder({ page }).analyze();
+      const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+      expect(
+        serious.map(
+          (v) =>
+            `${v.id}: ${v.nodes
+              .map((n) => n.target.join(" "))
+              .slice(0, 3)
+              .join(" | ")}`,
+        ),
+      ).toEqual([]);
+    });
+  }
