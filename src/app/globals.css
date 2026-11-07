@@ -4,15 +4,15 @@
 :root {
   --ink: #14181f;
   --ink-2: #4a5160;
-  --ink-3: #757c89;
+  --ink-3: #626976;
   --paper: #f7f5f0;
   --surface: #ffffff;
   --line: #e4e0d8;
-  --accent: #0e7c7b;
+  --accent: #0b6b6a;
   --accent-soft: #e3f1f0;
-  --success: #1e7f4f;
+  --success: #186b42;
   --success-soft: #e6f3ec;
-  --warning: #b26a00;
+  --warning: #925600;
   --warning-soft: #fbf0df;
   --danger: #b3261e;
   --danger-soft: #f9e6e4;
@@ -100,7 +100,7 @@ body {
   color: white;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #0b6766;
+  background: #085756;
 }
 .btn-warning {
   background: var(--warning);

@@ -37,22 +37,22 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-2 text-sm">
           <span className="text-ink-3 hidden md:inline">Viewing as</span>
-          <div role="group" aria-label="Persona" className="flex rounded-lg border border-line bg-surface p-0.5">
+          <nav aria-label="Persona" className="flex rounded-lg border border-line bg-surface p-0.5">
             <Link
               href="/shop"
               className={`px-3 py-1 rounded-md ${!merchant ? "bg-ink text-white" : "text-ink-2 hover:text-ink"}`}
-              aria-pressed={!merchant}
+              aria-current={!merchant ? "page" : undefined}
             >
               Buyer
             </Link>
             <Link
               href="/merchant"
               className={`px-3 py-1 rounded-md ${merchant ? "bg-ink text-white" : "text-ink-2 hover:text-ink"}`}
-              aria-pressed={merchant}
+              aria-current={merchant ? "page" : undefined}
             >
               Merchant
             </Link>
-          </div>
+          </nav>
         </div>
       </div>
       <nav aria-label="Main (mobile)" className="sm:hidden flex gap-1 px-4 pb-2 overflow-x-auto">

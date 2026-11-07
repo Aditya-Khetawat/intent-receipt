@@ -12,7 +12,7 @@ import { simulateDispute } from "./SimulateDisputeButton";
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const gridTheme = themeQuartz.withParams({
-  accentColor: "#0E7C7B",
+  accentColor: "#0B6B6A",
   backgroundColor: "#FFFFFF",
   foregroundColor: "#14181F",
   borderColor: "#E4E0D8",
