@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type Database from "better-sqlite3";
 import { rawDb, nowIso } from "@/lib/db";
-import { GENESIS_HASH, entryHashInput, type LedgerEntry, type LedgerType } from "./canonical";
+import { GENESIS_HASH, entryBodyInput, entryHashInput, type LedgerEntry, type LedgerType, type RedactedLedgerEntry } from "./canonical";
 import { signingKey } from "./keys";
 
 export * from "./canonical";
@@ -53,7 +53,8 @@ export function appendLedger(
     const prev_hash = last?.hash ?? GENESIS_HASH;
     // Round-trip payload through JSON so what we hash is exactly what we store.
     const storedPayload = JSON.parse(JSON.stringify(payload));
-    const hash = sha256Hex(entryHashInput({ seq, type, intent_id: intentId, payload: storedPayload, prev_hash }));
+    const body_sha256 = sha256Hex(entryBodyInput({ intent_id: intentId, payload: storedPayload }));
+    const hash = sha256Hex(entryHashInput({ seq, type, prev_hash, body_sha256 }));
     const signature = crypto.sign(null, Buffer.from(hash, "hex"), key.privateKey).toString("base64");
     const created_at = opts.createdAt ?? nowIso();
     db.prepare(
@@ -73,6 +74,31 @@ export function entriesForIntent(intentId: string, db: Database.Database = rawDb
   return (db.prepare("SELECT * FROM ledger WHERE intent_id = ? ORDER BY seq ASC").all(intentId) as LedgerRow[]).map(
     rowToEntry,
   );
+}
+
+/**
+ * Data for verifying one receipt: the chain up to its last entry, with every other
+ * receipt's entries reduced to headers (no intent id, no payload).
+ */
+export function chainForIntent(intentId: string, db: Database.Database = rawDb()): (LedgerEntry | RedactedLedgerEntry)[] {
+  const own = entriesForIntent(intentId, db);
+  const last = own.at(-1)?.seq ?? 0;
+  return allEntries(db)
+    .filter((e) => e.seq <= last)
+    .map((e) =>
+      e.intent_id === intentId
+        ? e
+        : {
+            seq: e.seq,
+            type: e.type,
+            redacted: true as const,
+            body_sha256: sha256Hex(entryBodyInput(e)),
+            prev_hash: e.prev_hash,
+            hash: e.hash,
+            signature: e.signature,
+            key_id: e.key_id,
+          },
+    );
 }
 
 export interface LedgerVerification {
@@ -98,7 +124,7 @@ export function verifyLedger(entries: LedgerEntry[] = allEntries()): LedgerVerif
     });
     if (e.seq !== expectedSeq) return fail("sequence gap");
     if (e.prev_hash !== prev) return fail("prev_hash does not match previous entry");
-    const recomputed = sha256Hex(entryHashInput(e));
+    const recomputed = sha256Hex(entryHashInput({ ...e, body_sha256: sha256Hex(entryBodyInput(e)) }));
     if (recomputed !== e.hash) return fail("hash does not match entry contents");
     if (e.key_id !== key.keyId) return fail(`unknown key_id ${e.key_id}`);
     const sigOk = crypto.verify(null, Buffer.from(e.hash, "hex"), key.publicKey, Buffer.from(e.signature, "base64"));

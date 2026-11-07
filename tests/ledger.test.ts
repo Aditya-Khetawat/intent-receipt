@@ -1,6 +1,16 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { resetTestDb } from "@/lib/db";
-import { appendLedger, allEntries, canonicalize, verifyLedger, GENESIS_HASH, sha256Hex, entryHashInput } from "@/lib/ledger";
+import {
+  appendLedger,
+  allEntries,
+  canonicalize,
+  chainForIntent,
+  verifyLedger,
+  GENESIS_HASH,
+  sha256Hex,
+  entryBodyInput,
+  entryHashInput,
+} from "@/lib/ledger";
 
 describe("canonicalize", () => {
   it("sorts keys recursively and strips whitespace", () => {
@@ -28,8 +38,28 @@ describe("ledger", () => {
     const b = appendLedger("ORDER_CREATED", "ir_1", { n: 2 });
     expect(a.prev_hash).toBe(GENESIS_HASH);
     expect(b.prev_hash).toBe(a.hash);
-    expect(a.hash).toBe(sha256Hex(entryHashInput(a)));
+    expect(a.hash).toBe(sha256Hex(entryHashInput({ ...a, body_sha256: sha256Hex(entryBodyInput(a)) })));
     expect(verifyLedger()).toMatchObject({ ok: true, count: 2, first_bad_seq: null });
+  });
+
+  it("shares other receipts only as verifiable headers", () => {
+    appendLedger("INTENT_CONFIRMED", "ir_other", { request: "someone else's private request" });
+    appendLedger("INTENT_CONFIRMED", "ir_mine", { request: "mine" });
+    appendLedger("ORDER_CREATED", "ir_other", { amount: 5 });
+    appendLedger("ORDER_CREATED", "ir_mine", { amount: 79 });
+    appendLedger("CAPTURE_COMPLETED", "ir_other", { amount: 5 });
+    const chain = chainForIntent("ir_mine");
+    // Up to my last entry only, and nothing from the other receipt but headers.
+    expect(chain.map((e) => e.seq)).toEqual([1, 2, 3, 4]);
+    expect(JSON.stringify(chain)).not.toMatch(/private request|ir_other/);
+    // Same algorithm as the browser Verify.
+    let prev = GENESIS_HASH;
+    for (const e of chain) {
+      const body = "redacted" in e ? e.body_sha256 : sha256Hex(entryBodyInput(e));
+      expect(e.prev_hash).toBe(prev);
+      expect(sha256Hex(entryHashInput({ seq: e.seq, type: e.type, prev_hash: e.prev_hash, body_sha256: body }))).toBe(e.hash);
+      prev = e.hash;
+    }
   });
 
   it("is append-only at the database level", () => {

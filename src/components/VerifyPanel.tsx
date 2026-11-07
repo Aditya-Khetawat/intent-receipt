@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { bytesToHex, entryHashInput, GENESIS_HASH, hexToBytes, type LedgerEntry } from "@/lib/ledger/canonical";
+import {
+  bytesToHex,
+  entryBodyInput,
+  entryHashInput,
+  GENESIS_HASH,
+  hexToBytes,
+  type LedgerEntry,
+  type RedactedLedgerEntry,
+} from "@/lib/ledger/canonical";
 
 type Result =
   | { state: "idle" }
@@ -10,6 +18,7 @@ type Result =
   | { state: "fail"; seq: number; reason: string };
 
 const b64ToBytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const sha256 = async (s: string) => bytesToHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 
 /** Recomputes every hash with Web Crypto and checks Ed25519 signatures in the browser where supported. */
 export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: string; serverOk: boolean; count: number; keyId: string }) {
@@ -20,7 +29,7 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
     try {
       const res = await fetch(`/api/ledger/${intentId}`, { cache: "no-store" });
       const data = (await res.json()) as {
-        entries: LedgerEntry[];
+        entries: (LedgerEntry | RedactedLedgerEntry)[];
         server_verification: { ok: boolean };
         key: { key_id: string; jwk: JsonWebKey };
       };
@@ -33,7 +42,10 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
       let prev = GENESIS_HASH;
       for (const e of data.entries) {
         if (e.prev_hash !== prev) return setResult({ state: "fail", seq: e.seq, reason: "chain link broken (prev_hash mismatch)" });
-        const digest = bytesToHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(entryHashInput(e))));
+        // This receipt's entries: recompute the body digest from the content.
+        // Other receipts' entries arrive redacted, with only their body digest.
+        const bodySha = "redacted" in e ? e.body_sha256 : await sha256(entryBodyInput(e));
+        const digest = await sha256(entryHashInput({ seq: e.seq, type: e.type, prev_hash: e.prev_hash, body_sha256: bodySha }));
         if (digest !== e.hash) return setResult({ state: "fail", seq: e.seq, reason: "hash does not match the entry contents" });
         if (key) {
           const ok = await crypto.subtle.verify({ name: "Ed25519" }, key, b64ToBytes(e.signature), hexToBytes(e.hash));

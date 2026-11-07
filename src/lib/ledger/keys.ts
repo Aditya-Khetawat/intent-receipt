@@ -63,7 +63,7 @@ export function publicKeyDocument() {
   return {
     key_id: k.keyId,
     algorithm: "Ed25519",
-    signs: "SHA-256 digest bytes of canonical_json({seq,type,intent_id,payload,prev_hash})",
+    signs: "SHA-256 digest bytes of canonical_json({seq,type,prev_hash,body_sha256}), where body_sha256 = SHA-256(canonical_json({intent_id,payload}))",
     jwk: { kty: jwk.kty, crv: jwk.crv, x: jwk.x },
     spki_b64: k.publicKey.export({ format: "der", type: "spki" }).toString("base64"),
     dev_key: k.ephemeral,

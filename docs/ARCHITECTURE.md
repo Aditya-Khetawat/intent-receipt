@@ -49,7 +49,7 @@ flowchart TD
 
 ## Ledger format
 
-`hash = SHA-256(canonical_json({seq, type, intent_id, payload, prev_hash}))`, genesis `prev_hash` = 64 zeros. Canonical JSON = keys sorted recursively, no whitespace, `JSON.stringify` escaping, finite numbers only (matches RFC 8785 for the values we store). Signature = Ed25519 over the 32 hash bytes. Public key at `/.well-known/intent-receipt-key.json` (JWK + SPKI).
+`body_sha256 = SHA-256(canonical_json({intent_id, payload}))` and `hash = SHA-256(canonical_json({seq, type, prev_hash, body_sha256}))`, genesis `prev_hash` = 64 zeros. Splitting out the body digest lets the receipt page verify the whole chain while every other receipt is shared as headers only (no intent id, no payload): see `chainForIntent()`. Canonical JSON = keys sorted recursively, no whitespace, `JSON.stringify` escaping, finite numbers only (matches RFC 8785 for the values we store). Signature = Ed25519 over the 32 hash bytes. Public key at `/.well-known/intent-receipt-key.json` (JWK + SPKI).
 
 "Tamper-evident", not "tamper-proof": someone with database write access can change rows, but the change is detected by Verify (first bad `seq` reported) unless they also hold the signing key.
 
