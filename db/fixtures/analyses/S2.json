@@ -1,26 +1,71 @@
 {
-  "generated_at": "2026-11-07T00:00:00.000Z",
-  "origin": "hand-authored placeholder written before any live model run; regenerate with `npm run gen-fixtures` once an AI key is set",
-  "model": "none (hand-authored)",
+  "generated_at": "2026-11-07T13:15:39.079Z",
+  "origin": "live run of groq/openai/gpt-oss-120b",
+  "model": "openai/gpt-oss-120b",
   "scenario": "S2",
   "output": {
     "classification": "AGENT_MISINTERPRETATION",
-    "confidence": 0.9,
+    "confidence": 0.94,
     "agent_fault": "LIKELY",
     "recommended_seller_action": "ACCEPT_AND_REFUND",
-    "summary": "The buyer asked for a 2 m white cable. The legacy agent chose a 1 m black cable, the constraint check marks length and color as UNMET, and the confirmation text did not disclose either deviation. The seller should refund.",
+    "summary": "The buyer requested a 2 m white USB‑C fast‑charge cable under $20. The intent record shows the agent selected a 1 m black variant, which violates both length and color constraints. The confirmation card incorrectly claimed the item \"Matches your request.\" The buyer received the short black cable, matching the fulfillment events, and therefore the item is not as described due to the agent's mis‑selection that was not disclosed.",
     "evidence": [
-      { "id": "e1", "claim": "The buyer asked for 2 m and white.", "supports": "BUYER", "pointer": "/intent/request/verbatim", "quoted_value": "USB-C fast-charge cable, 2 m, white, under $20" },
-      { "id": "e2", "claim": "The length requirement was not met.", "supports": "BUYER", "pointer": "/intent/constraint_check/results/2/status", "quoted_value": "UNMET" },
-      { "id": "e3", "claim": "The selected cable is 1 m.", "supports": "BUYER", "pointer": "/intent/constraint_check/results/2/actual", "quoted_value": 1 },
-      { "id": "e4", "claim": "The color requirement was not met.", "supports": "BUYER", "pointer": "/intent/constraint_check/results/3/status", "quoted_value": "UNMET" },
-      { "id": "e5", "claim": "The order was placed by an older agent prompt version.", "supports": "NEUTRAL", "pointer": "/intent/agent/prompt_version", "quoted_value": "shop-agent@0.9" },
-      { "id": "e6", "claim": "The agent's rationale claimed a match.", "supports": "BUYER", "pointer": "/intent/selection/rationale", "quoted_value": "Matches the request: USB-C fast-charge cable under $20." }
+      {
+        "id": "e1",
+        "claim": "Buyer explicitly asked for a 2 m white cable.",
+        "supports": "BUYER",
+        "pointer": "/intent/request/verbatim",
+        "quoted_value": "USB-C fast-charge cable, 2 m, white, under $20"
+      },
+      {
+        "id": "e2",
+        "claim": "Agent selected a 1 m cable, violating the length constraint.",
+        "supports": "BUYER",
+        "pointer": "/intent/selection/variant_attributes/length_m",
+        "quoted_value": 1
+      },
+      {
+        "id": "e3",
+        "claim": "Agent selected a black cable, violating the color constraint.",
+        "supports": "BUYER",
+        "pointer": "/intent/selection/variant_attributes/color",
+        "quoted_value": "black"
+      },
+      {
+        "id": "e4",
+        "claim": "Length constraint was not met.",
+        "supports": "BUYER",
+        "pointer": "/intent/constraint_check/results/2/status",
+        "quoted_value": "UNMET"
+      },
+      {
+        "id": "e5",
+        "claim": "Color constraint was not met.",
+        "supports": "BUYER",
+        "pointer": "/intent/constraint_check/results/3/status",
+        "quoted_value": "UNMET"
+      },
+      {
+        "id": "e6",
+        "claim": "Confirmation text claimed the item matched the request despite constraint violations.",
+        "supports": "BUYER",
+        "pointer": "/intent/confirmation/presented_text",
+        "quoted_value": "Marlowe Labs USB-C Cable\nTotal $14.00 USD\nEstimated delivery in 4 days\nMatches your request."
+      },
+      {
+        "id": "e7",
+        "claim": "The item was delivered, confirming the buyer received the wrong product.",
+        "supports": "NEUTRAL",
+        "pointer": "/fulfillment/events/2/status",
+        "quoted_value": "DELIVERED"
+      }
     ],
-    "buyer_view": "The buyer clearly asked for a 2 m white cable and was told the item matched; the card never mentioned it was 1 m and black.",
-    "seller_view": "The cable shipped as listed and was delivered, but the seller's own agent made the wrong selection without disclosure. Contesting would likely fail and harm trust.",
-    "seller_response_draft": "We accept this claim. Our shopping agent selected a 1 m black cable for a request that specified 2 m and white, and the confirmation did not disclose the difference. We are refunding the buyer in full.",
-    "buyer_message_draft": "You're right, and we're sorry. Our shopping assistant picked the wrong cable and didn't tell you. We're refunding you in full; no need to send it back.",
-    "uncertainties": ["The legacy confirmation card is only available as the stored text in the intent record."]
+    "buyer_view": "I asked for a 2 m white USB‑C fast‑charge cable under $20. The confirmation said it matched my request, but I received a short black cable instead. This does not fulfill what I asked for.",
+    "seller_view": "The order was captured and shipped according to the agent's selection. The fulfillment logs show delivery of the SKU that was ordered. However, the agent's selection violated the buyer's explicit length and color constraints, and the confirmation text misrepresented the match.",
+    "seller_response_draft": "We acknowledge that the item delivered does not meet the buyer's original specifications. The agent mistakenly selected a 1 m black cable while the buyer requested a 2 m white cable. We will issue a full refund to the buyer.",
+    "buyer_message_draft": "We’re sorry the cable you received does not match your request. We’ve processed a full refund for your purchase. Thank you for your patience.",
+    "uncertainties": [
+      "None; the intent record and fulfillment data clearly show the mismatch."
+    ]
   }
 }

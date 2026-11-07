@@ -1,24 +1,55 @@
 {
-  "generated_at": "2026-11-07T00:00:00.000Z",
-  "origin": "hand-authored placeholder written before any live model run; regenerate with `npm run gen-fixtures` once an AI key is set",
-  "model": "none (hand-authored)",
+  "generated_at": "2026-11-07T13:16:28.480Z",
+  "origin": "live run of groq/openai/gpt-oss-120b",
+  "model": "openai/gpt-oss-120b",
   "scenario": "S3",
   "output": {
     "classification": "ITEM_NOT_RECEIVED",
-    "confidence": 0.92,
+    "confidence": 0.96,
     "agent_fault": "NONE",
     "recommended_seller_action": "ACCEPT_AND_REFUND",
-    "summary": "The intent record is clean, but the carrier reported a delivery exception and returned the parcel to the sender, so the buyer never received the item.",
+    "summary": "The buyer ordered a Tidewell Dry Bag that matches the request and was confirmed. Shipping events show a delivery exception where the address was not found and the package was returned to sender, so the buyer never received the item. The seller should accept the dispute and refund the purchase.",
     "evidence": [
-      { "id": "e1", "claim": "The parcel did not reach the buyer.", "supports": "BUYER", "pointer": "/fulfillment/events/2/status", "quoted_value": "DELIVERY_EXCEPTION" },
-      { "id": "e2", "claim": "The carrier returned it to the sender.", "supports": "BUYER", "pointer": "/fulfillment/events/2/detail", "quoted_value": "Address not found, returned to sender" },
-      { "id": "e3", "claim": "The agent's selection met the color requirement.", "supports": "SELLER", "pointer": "/intent/constraint_check/results/2/status", "quoted_value": "MET" },
-      { "id": "e4", "claim": "The dispute reason is non-receipt.", "supports": "NEUTRAL", "pointer": "/dispute/reason", "quoted_value": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED" }
+      {
+        "id": "e1",
+        "claim": "Buyer opened a dispute claiming the item was not received.",
+        "supports": "BUYER",
+        "pointer": "/dispute/reason",
+        "quoted_value": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED"
+      },
+      {
+        "id": "e2",
+        "claim": "Shipping log shows a delivery exception due to address not found.",
+        "supports": "BUYER",
+        "pointer": "/fulfillment/events/2/status",
+        "quoted_value": "DELIVERY_EXCEPTION"
+      },
+      {
+        "id": "e3",
+        "claim": "Detail of the exception confirms the package was returned to sender.",
+        "supports": "BUYER",
+        "pointer": "/fulfillment/events/2/detail",
+        "quoted_value": "Address not found, returned to sender"
+      },
+      {
+        "id": "e4",
+        "claim": "The ordered item matches the buyer's request and was confirmed.",
+        "supports": "SELLER",
+        "pointer": "/order/items/0/name",
+        "quoted_value": "Tidewell Dry Bag"
+      },
+      {
+        "id": "e5",
+        "claim": "Confirmation text shows all constraints were met, confirming correct product selection.",
+        "supports": "SELLER",
+        "pointer": "/intent/confirmation/presented_text",
+        "quoted_value": "Tidewell Dry Bag (blue, 20L)\nSKU TW-DRY-20-BLU · Quantity 1\nTotal $24.00 USD\nEstimated delivery in 4 days\nConstraint check\nMET · capacity liters: you asked for 20, this item is 20\nMET · feature: you asked for waterproof, this item is waterproof\nMET · color: you asked for blue, this item is blue\nMET · max price: you asked for 30, this item is 24"
+      }
     ],
-    "buyer_view": "The buyer paid and never got the dry bag.",
-    "seller_view": "The agent's choice was correct, but the shipment failed and the item came back. The fair outcome is a refund or a reshipment.",
-    "seller_response_draft": "Tracking shows a delivery exception (address not found) and the parcel was returned to us. We are refunding the buyer in full.",
-    "buyer_message_draft": "Sorry, the carrier couldn't find your address and returned the parcel to us. We've refunded you in full. If you'd like it reshipped, reply with your full address.",
-    "uncertainties": ["Whether the address error came from the buyer or the carrier."]
+    "buyer_view": "I ordered a blue 20 L waterproof dry bag for under $30. The confirmation showed the correct item and price, but over a week later I still haven’t received it. The tracking says there’s an address problem, so I’m out of pocket.",
+    "seller_view": "The buyer received the exact product they requested, as confirmed by the intent record. Shipping records indicate a delivery exception caused the package to be returned to us, which is a carrier issue outside our control.",
+    "seller_response_draft": "We regret the delivery issue. Our records show the package was returned to sender due to an address problem. We will issue a full refund of $24.00 as requested.",
+    "buyer_message_draft": "I’m sorry you haven’t received your dry bag. We’ve processed a full refund of $24.00 and you should see the credit shortly. Thank you for your patience.",
+    "uncertainties": []
   }
 }

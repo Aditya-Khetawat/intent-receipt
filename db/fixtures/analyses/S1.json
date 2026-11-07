@@ -1,26 +1,64 @@
 {
-  "generated_at": "2026-11-07T00:00:00.000Z",
-  "origin": "hand-authored placeholder written before any live model run; regenerate with `npm run gen-fixtures` once an AI key is set",
-  "model": "none (hand-authored)",
+  "generated_at": "2026-11-07T13:15:07.818Z",
+  "origin": "live run of groq/openai/gpt-oss-120b",
+  "model": "openai/gpt-oss-120b",
   "scenario": "S1",
   "output": {
     "classification": "BUYER_CHANGED_MIND",
-    "confidence": 0.86,
+    "confidence": 0.93,
     "agent_fault": "NONE",
     "recommended_seller_action": "CONTEST",
-    "summary": "The buyer asked for a waterproof 40L black backpack under $85, confirmed a card showing exactly that, and the matching SKU was delivered. The complaint that it is too big contradicts the buyer's own request.",
+    "summary": "The buyer's original request explicitly asked for a waterproof 40 L black backpack under $85. The agent selected the Brightpine Ridge Pack that exactly matches those constraints, as confirmed by the constraint check and the confirmation card. Shipping records show the item was delivered. The buyer now claims the backpack is too big, which contradicts the request they made. Therefore the dispute is a buyer‑changed‑mind case, and the seller should contest.",
     "evidence": [
-      { "id": "e1", "claim": "The buyer's own request specified 40L.", "supports": "SELLER", "pointer": "/intent/request/verbatim", "quoted_value": "I need a waterproof 40L backpack in black, under $85, for a trip next month." },
-      { "id": "e2", "claim": "The deterministic check found the capacity requirement met.", "supports": "SELLER", "pointer": "/intent/constraint_check/results/1/status", "quoted_value": "MET" },
-      { "id": "e3", "claim": "The selected variant is 40L.", "supports": "SELLER", "pointer": "/intent/selection/variant_attributes/size", "quoted_value": "40L" },
-      { "id": "e4", "claim": "The SKU confirmed by the buyer is the 40L black pack.", "supports": "SELLER", "pointer": "/intent/selection/sku", "quoted_value": "BP-RIDGE-40-BLK" },
-      { "id": "e5", "claim": "The parcel was delivered.", "supports": "SELLER", "pointer": "/fulfillment/events/3/status", "quoted_value": "DELIVERED" },
-      { "id": "e6", "claim": "The buyer says the size is wrong.", "supports": "BUYER", "pointer": "/dispute/buyer_claim_text", "quoted_value": "The backpack is way too big for me. I never asked for this size. I want my money back." }
+      {
+        "id": "e1",
+        "claim": "The buyer requested a waterproof 40 L black backpack under $85.",
+        "supports": "SELLER",
+        "pointer": "/intent/request/verbatim",
+        "quoted_value": "I need a waterproof 40L backpack in black, under $85, for a trip next month."
+      },
+      {
+        "id": "e2",
+        "claim": "All extracted constraints were met by the selected product.",
+        "supports": "SELLER",
+        "pointer": "/intent/constraint_check/results/0/status",
+        "quoted_value": "MET"
+      },
+      {
+        "id": "e3",
+        "claim": "The confirmation card displayed the exact product (black, 40 L) that satisfies the buyer's constraints.",
+        "supports": "SELLER",
+        "pointer": "/intent/confirmation/presented_text",
+        "quoted_value": "Brightpine Ridge Pack (black, 40L)\nSKU BP-RIDGE-40-BLK · Quantity 1\nTotal $79.00 USD\nEstimated delivery in 4 days\nConstraint check\nMET · feature: you asked for waterproof, this item is waterproof\nMET · capacity liters: you asked for 40, this item is 40\nMET · color: you asked for black, this item is black\nMET · max price: you asked for 85, this item is 79\nAgent assumptions\nTrip timing is not a hard delivery date; standard delivery (4 days) is fine."
+      },
+      {
+        "id": "e4",
+        "claim": "The item was shipped and delivered to the buyer.",
+        "supports": "SELLER",
+        "pointer": "/fulfillment/events/3/status",
+        "quoted_value": "DELIVERED"
+      },
+      {
+        "id": "e5",
+        "claim": "The seller’s return window is 30 days, and the dispute was opened well within that period.",
+        "supports": "NEUTRAL",
+        "pointer": "/policy/return_window_days",
+        "quoted_value": 30
+      },
+      {
+        "id": "e6",
+        "claim": "The order captured the Brightpine Ridge Pack, matching the selected product.",
+        "supports": "SELLER",
+        "pointer": "/order/items/0/name",
+        "quoted_value": "Brightpine Ridge Pack"
+      }
     ],
-    "buyer_view": "The buyer finds the pack too big in practice and may not have pictured what 40 litres looks like.",
-    "seller_view": "The buyer explicitly asked for 40L, saw 40L on the confirmation card, confirmed it, and received the exact SKU. This is a change of mind, not a fault.",
-    "seller_response_draft": "The buyer requested a 40L waterproof black backpack under $85 and confirmed a card showing the 40L black Ridge Pack at $79. Order records and carrier tracking show SKU BP-RIDGE-40-BLK was delivered. We are happy to accept a return within our 30-day return window.",
-    "buyer_message_draft": "Hi, sorry the pack feels too big. Our records show the 40L size you requested. You are welcome to return it within 30 days, or we can help you exchange it for the 30L version.",
-    "uncertainties": ["Whether the buyer would accept an exchange for the 30L variant."]
+    "buyer_view": "The buyer believes the backpack they received is too large for their needs and claims they never asked for this size, requesting a full refund.",
+    "seller_view": "The buyer explicitly asked for a 40 L backpack, and the agent selected a product that exactly matches that specification. The item was delivered as confirmed, so the buyer’s complaint reflects a change of mind rather than a mismatch with the original request.",
+    "seller_response_draft": "We have reviewed the intent record and shipping evidence. The buyer’s original request was for a waterproof 40 L black backpack under $85, and the Brightpine Ridge Pack (40 L, black, waterproof, $79) fulfills all those constraints. The item was shipped and delivered on 2026‑10‑17. As the product matches the confirmed order, we respectfully contest the dispute.",
+    "buyer_message_draft": "We’re sorry the backpack isn’t the size you expected. According to the original request, a 40 L backpack was specified, and the item delivered matches that. If you’d like to discuss a return within our 30‑day window, please let us know.",
+    "uncertainties": [
+      "None identified; evidence clearly shows the product matches the buyer’s stated constraints."
+    ]
   }
 }
