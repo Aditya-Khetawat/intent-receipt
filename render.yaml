@@ -1,0 +1,49 @@
+# Render Blueprint: one Node web service. Secrets are set in the Render dashboard
+# (sync: false), never committed. See docs/OPERATIONS.md.
+services:
+  - type: web
+    name: intentreceipt
+    runtime: node
+    plan: starter # paid instance (funded by hackathon credits) so judges never hit a cold start
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: WEBHOOK_VERIFY
+        value: "on"
+      - key: AI_PROVIDER
+        value: google
+      - key: AI_MODEL_AGENT
+        value: gemini-3.5-flash
+      - key: AI_MODEL_ANALYST
+        value: gemini-3.5-flash
+      - key: AI_DAILY_BUDGET_CALLS
+        value: "300"
+      - key: DATABASE_PATH
+        value: ./data/intentreceipt.db
+      - key: INTENT_KEY_ID
+        value: ir-key-1
+      - key: APP_BASE_URL
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        sync: false
+      - key: INTENT_SIGNING_KEY
+        sync: false
