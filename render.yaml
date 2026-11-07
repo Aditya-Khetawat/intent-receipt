@@ -22,11 +22,11 @@ services:
       - key: WEBHOOK_VERIFY
         value: "on"
       - key: AI_PROVIDER
-        value: google
+        value: groq
       - key: AI_MODEL_AGENT
-        value: gemini-3.5-flash
+        value: openai/gpt-oss-120b
       - key: AI_MODEL_ANALYST
-        value: gemini-3.5-flash
+        value: openai/gpt-oss-120b
       - key: AI_DAILY_BUDGET_CALLS
         value: "300"
       - key: DATABASE_PATH
@@ -43,7 +43,7 @@ services:
         sync: false
       - key: PAYPAL_WEBHOOK_ID
         sync: false
-      - key: GOOGLE_GENERATIVE_AI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: INTENT_SIGNING_KEY
         sync: false

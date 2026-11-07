@@ -48,14 +48,29 @@ async function main() {
   );
   if (!env.webhookVerify) add("Webhook verification", "warn", "WEBHOOK_VERIFY=off (development only). Never deploy like this.");
 
-  const aiKey = env.aiProvider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  const keyVar = ({ groq: "GROQ_API_KEY", anthropic: "ANTHROPIC_API_KEY", google: "GOOGLE_GENERATIVE_AI_API_KEY" } as Record<string, string>)[env.aiProvider];
+  const aiKey = keyVar ? process.env[keyVar] : undefined;
   add(
     `Runtime AI key (${env.aiProvider})`,
     aiKey ? true : "warn",
     aiKey
       ? `models: agent=${env.aiModelAgent}, analyst=${env.aiModelAnalyst}`
-      : "No key. The shopping agent is disabled and disputes show CACHED analyses. Get a free key at https://aistudio.google.com/apikey and set GOOGLE_GENERATIVE_AI_API_KEY.",
+      : `No key. The shopping agent is disabled and disputes show CACHED analyses. Get a free key at https://console.groq.com/keys and set GROQ_API_KEY (or set ${keyVar ?? "a supported AI_PROVIDER"}).`,
   );
+  if (aiKey && env.aiProvider === "groq") {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${aiKey}` } });
+      const ids = res.ok ? ((await res.json()) as { data: { id: string }[] }).data.map((m) => m.id) : [];
+      const missing = [env.aiModelAgent, env.aiModelAnalyst].filter((m) => !ids.includes(m));
+      add(
+        "AI model id exists",
+        res.ok && missing.length === 0,
+        !res.ok ? `Groq rejected the key (HTTP ${res.status}).` : missing.length ? `Not available on Groq: ${missing.join(", ")}` : env.aiModelAgent,
+      );
+    } catch (e) {
+      add("AI model id exists", "warn", (e as Error).message);
+    }
+  }
   if (aiKey && env.aiProvider === "google") {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${env.aiModelAgent}?key=${aiKey}`);

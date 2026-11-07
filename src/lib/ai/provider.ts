@@ -1,6 +1,7 @@
 import { generateText, Output, isStepCount, type LanguageModel, type ToolSet, type ModelMessage } from "ai";
 import { createGoogle } from "@ai-sdk/google";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGroq } from "@ai-sdk/groq";
 import { ulid } from "ulid";
 import type { z } from "zod";
 import { env } from "@/lib/env";
@@ -26,6 +27,8 @@ function apiKey(): string {
       return process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
     case "anthropic":
       return process.env.ANTHROPIC_API_KEY ?? "";
+    case "groq":
+      return process.env.GROQ_API_KEY ?? "";
     default:
       return "";
   }
@@ -40,7 +43,7 @@ export function setTestModel(m: LanguageModel | null) {
 export function aiStatus(): { available: boolean; provider: string; agentModel: string; analystModel: string; reason?: string } {
   const base = { provider: env.aiProvider, agentModel: env.aiModelAgent, analystModel: env.aiModelAnalyst };
   if (testModel) return { ...base, available: true };
-  if (!["google", "anthropic"].includes(env.aiProvider)) {
+  if (!["google", "anthropic", "groq"].includes(env.aiProvider)) {
     return { ...base, available: false, reason: `Unsupported AI_PROVIDER "${env.aiProvider}"` };
   }
   if (!apiKey()) return { ...base, available: false, reason: `No API key for provider "${env.aiProvider}"` };
@@ -57,6 +60,8 @@ function model(kind: AiKind): LanguageModel {
   switch (env.aiProvider) {
     case "anthropic":
       return createAnthropic({ apiKey: apiKey() })(id);
+    case "groq":
+      return createGroq({ apiKey: apiKey() })(id);
     case "google":
     default:
       return createGoogle({ apiKey: apiKey() })(id);
@@ -169,6 +174,8 @@ export async function generateStructured<S extends z.ZodTypeAny>(opts: {
         system: opts.system,
         prompt: opts.prompt,
         output: Output.object({ schema: opts.schema }),
+        // Groq's strict mode rejects min/max keywords; zod still validates the result.
+        providerOptions: { groq: { strictJsonSchema: false } },
         temperature: 0.1,
         maxOutputTokens: 4000,
         maxRetries: 0,

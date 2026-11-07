@@ -43,13 +43,17 @@ export const env = {
     return str("WEBHOOK_VERIFY", "on") !== "off";
   },
   get aiProvider() {
-    return str("AI_PROVIDER", "google");
+    return str("AI_PROVIDER", "groq");
+  },
+  /** Default model for the selected provider, used when AI_MODEL_* is unset. */
+  get aiDefaultModel() {
+    return ({ google: "gemini-3.5-flash", anthropic: "claude-haiku-5-5" } as Record<string, string>)[this.aiProvider] ?? "openai/gpt-oss-120b";
   },
   get aiModelAgent() {
-    return str("AI_MODEL_AGENT", "gemini-3.5-flash");
+    return str("AI_MODEL_AGENT", this.aiDefaultModel);
   },
   get aiModelAnalyst() {
-    return str("AI_MODEL_ANALYST", "gemini-3.5-flash");
+    return str("AI_MODEL_ANALYST", this.aiDefaultModel);
   },
   get aiDailyBudgetCalls() {
     return Number(str("AI_DAILY_BUDGET_CALLS", "300"));
