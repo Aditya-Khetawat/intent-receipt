@@ -6,7 +6,8 @@ services:
     runtime: node
     plan: starter # paid instance (covered by the $50 hackathon credits) so judges never hit a cold start
     region: oregon
-    buildCommand: npm ci && npm run build
+    # NODE_ENV=production makes npm skip devDependencies, which next build needs (Tailwind, TypeScript).
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     autoDeploy: true
