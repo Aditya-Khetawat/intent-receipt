@@ -1,4 +1,4 @@
--- IntentReceipt schema v1 (see HACKATHON_BRIEF.md §7)
+-- IntentReceipt schema v1
 
 CREATE TABLE IF NOT EXISTS buyers (
   id TEXT PRIMARY KEY,

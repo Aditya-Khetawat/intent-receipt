@@ -1,7 +1,7 @@
 # Rules re-check
 
 Checked 2026-11-07 against the live Devpost pages: `/rules`, `/details/faqs`, `/details/aggrid`, `/updates`.
-The official rules prevail over `HACKATHON_BRIEF.md`.
+The official rules prevail over our internal project brief.
 
 ## Matches the brief
 

@@ -47,3 +47,4 @@ next-env.d.ts
 /playwright-report/
 /.cache-specs/
 /.claude/
+/HACKATHON_BRIEF.md
