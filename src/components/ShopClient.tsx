@@ -1,0 +1,335 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import type { CardLine, IntentRecord } from "@/lib/intents";
+import { Badge, money } from "./ui";
+
+interface Msg {
+  role: "user" | "agent" | "system";
+  text: string;
+}
+
+interface Proposal {
+  id: string;
+  status: string;
+  card: CardLine[];
+  record: IntentRecord;
+}
+
+type Phase = "chatting" | "proposed" | "confirming" | "pay" | "capturing" | "done";
+
+const SUGGESTIONS = [
+  "I need a waterproof 40L backpack in black, under $85, for a trip next month.",
+  "USB-C fast-charge cable, 2 m, white, under $20",
+  "A 20L waterproof dry bag in blue, under $30 please.",
+];
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error ?? `Request failed (${res.status})`);
+  return data as T;
+}
+
+export function ShopClient({
+  initialPrompt,
+  paypalClientId,
+  aiAvailable,
+  aiModel,
+}: {
+  initialPrompt: string;
+  paypalClientId: string;
+  aiAvailable: boolean;
+  aiModel: string;
+}) {
+  const [messages, setMessages] = useState<Msg[]>([
+    {
+      role: "agent",
+      text: "Hi, I'm the Fernhill Outfitters shopping agent. Tell me what you need, including any must-haves like size, colour or budget, and I'll find one option for you to confirm.",
+    },
+  ]);
+  const [input, setInput] = useState(initialPrompt);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [phase, setPhase] = useState<Phase>("chatting");
+  const [error, setError] = useState<string | null>(null);
+  const [aiDown, setAiDown] = useState(!aiAvailable);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, busy]);
+
+  async function send(text: string) {
+    if (!text.trim() || busy) return;
+    setError(null);
+    setMessages((m) => [...m, { role: "user", text }]);
+    setInput("");
+    setBusy(true);
+    try {
+      const r = await postJson<{ sessionId: string; reply: string; intent: Proposal | null }>("/api/agent", { sessionId, message: text });
+      setSessionId(r.sessionId);
+      setMessages((m) => [...m, { role: "agent", text: r.reply }]);
+      if (r.intent) {
+        setProposal(r.intent);
+        setPhase("proposed");
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (/not configured|budget|rate limit/i.test(msg)) setAiDown(true);
+      setMessages((m) => [...m, { role: "system", text: msg }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirm() {
+    if (!proposal) return;
+    setPhase("confirming");
+    setError(null);
+    try {
+      // The exact text rendered on the card is what gets hashed and signed.
+      const presented = proposal.card.map((l) => l.text).join("\n");
+      await postJson(`/api/intents/${proposal.id}/confirm`, { presented_text: presented, client_nonce: crypto.randomUUID() });
+      setPhase("pay");
+    } catch (e) {
+      setError((e as Error).message);
+      setPhase("proposed");
+    }
+  }
+
+  async function change() {
+    if (proposal) await fetch(`/api/intents/${proposal.id}/cancel`, { method: "POST" }).catch(() => {});
+    setProposal(null);
+    setPhase("chatting");
+    setMessages((m) => [...m, { role: "system", text: "Proposal discarded. Tell the agent what to change." }]);
+  }
+
+  async function createOrder(): Promise<string> {
+    const r = await postJson<{ id: string }>("/api/orders", { intentId: proposal!.id });
+    return r.id;
+  }
+
+  async function capture(orderId: string) {
+    setPhase("capturing");
+    try {
+      await postJson("/api/orders/capture", { intentId: proposal!.id, paypalOrderId: orderId });
+      setPhase("done");
+    } catch (e) {
+      setError(`Payment capture failed: ${(e as Error).message}. You were not charged twice; try again.`);
+      setPhase("pay");
+    }
+  }
+
+  async function simulatedCheckout() {
+    setError(null);
+    try {
+      const id = await createOrder();
+      await capture(id);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  const unmet = proposal?.record.constraint_check.results.some((r) => r.status === "UNMET") ?? false;
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 grid lg:grid-cols-[1fr_420px] gap-5">
+      <section className="card flex flex-col h-[calc(100vh-180px)] min-h-[520px]" aria-label="Chat with the shopping agent">
+        <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-2">
+          <div>
+            <h1 className="font-semibold">Shopping agent</h1>
+            <p className="text-xs text-ink-3">Runtime model: {aiModel}</p>
+          </div>
+          <Badge tone="info">PayPal sandbox</Badge>
+        </div>
+        <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3" aria-live="polite" aria-busy={busy}>
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap ${
+                  m.role === "user" ? "bg-ink text-white" : m.role === "system" ? "bg-warning-soft text-warning text-sm" : "bg-neutral-soft"
+                }`}
+              >
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {busy && (
+            <div className="flex gap-2 items-center text-sm text-ink-3" role="status">
+              <span className="skeleton h-3 w-24" /> Agent is searching the catalog…
+            </div>
+          )}
+          {aiDown && (
+            <div className="rounded-lg border border-line bg-paper p-3 text-sm">
+              The live agent is unavailable right now. You can still follow the{" "}
+              <Link href="/demo" className="text-accent underline">
+                guided demo
+              </Link>{" "}
+              with seeded orders, receipts and disputes.
+            </div>
+          )}
+        </div>
+        <div className="border-t border-line p-3">
+          {messages.length <= 1 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} type="button" className="text-left text-xs rounded-full border border-line px-3 py-1.5 hover:bg-neutral-soft" onClick={() => setInput(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void send(input);
+            }}
+          >
+            <label htmlFor="chat-input" className="sr-only">
+              Message the agent
+            </label>
+            <input
+              id="chat-input"
+              className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-[15px] min-w-0"
+              placeholder="e.g. a waterproof 40L backpack in black under $85"
+              value={input}
+              maxLength={600}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={busy || phase === "done"}
+            />
+            <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()}>
+              Send
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <aside aria-label="Confirmation" className="space-y-4">
+        {!proposal && (
+          <div className="card p-5 text-sm text-ink-2">
+            <p className="eyebrow mb-2">Confirmation card</p>
+            <p>When the agent proposes an item, its confirmation card appears here with a constraint check computed by code, not by the model.</p>
+            <p className="mt-2">Nothing is ordered until you confirm, and the order can only be created for exactly what you confirmed.</p>
+          </div>
+        )}
+        {proposal && <ConfirmationCard proposal={proposal} />}
+        {proposal && phase === "proposed" && (
+          <div className="flex gap-2">
+            <button type="button" className={`btn flex-1 ${unmet ? "btn-warning" : "btn-primary"}`} onClick={confirm}>
+              {unmet ? "Confirm anyway" : "Confirm"}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={change}>
+              Change
+            </button>
+          </div>
+        )}
+        {phase === "confirming" && <p className="text-sm text-ink-3" role="status">Signing your confirmation…</p>}
+        {(phase === "pay" || phase === "capturing") && proposal && (
+          <div className="card p-4 space-y-3">
+            <p className="text-sm">
+              <Badge tone="success">Confirmed</Badge> <span className="ml-1">Signed into the ledger. Pay with PayPal (sandbox):</span>
+            </p>
+            {paypalClientId ? (
+              <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD", intent: "capture" }}>
+                <PayPalButtons
+                  style={{ layout: "vertical", label: "pay" }}
+                  disabled={phase === "capturing"}
+                  createOrder={createOrder}
+                  onApprove={async (data) => capture(data.orderID)}
+                  onCancel={() => setError("You cancelled the PayPal approval. Your confirmation is saved; you can pay when ready.")}
+                  onError={(err) => setError(`PayPal error: ${String((err as { message?: string })?.message ?? err)}`)}
+                />
+              </PayPalScriptProvider>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-ink-3">
+                  PayPal sandbox credentials are not configured on this server, so checkout is simulated. The order is labelled SIMULATED everywhere.
+                </p>
+                <button type="button" className="btn btn-secondary w-full" onClick={simulatedCheckout} disabled={phase === "capturing"}>
+                  Simulated checkout <Badge tone="warning">Simulated</Badge>
+                </button>
+              </div>
+            )}
+            {phase === "capturing" && <p className="text-sm text-ink-3" role="status">Capturing payment…</p>}
+          </div>
+        )}
+        {phase === "done" && proposal && (
+          <div className="card p-5 border-success/40" role="status">
+            <p className="font-semibold text-success">Payment captured</p>
+            <p className="text-sm text-ink-2 mt-1">Your request, the agent&apos;s choice and your confirmation are linked to the PayPal order.</p>
+            <Link href={`/receipt/${proposal.id}`} className="btn btn-primary w-full mt-4">
+              View your Intent Receipt
+            </Link>
+          </div>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-danger bg-danger-soft rounded-lg p-3">
+            {error}
+          </p>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function ConfirmationCard({ proposal }: { proposal: Proposal }) {
+  const s = proposal.record.selection;
+  const [title, ...rest] = proposal.card;
+  return (
+    <div className="card overflow-hidden">
+      <div className="h-28 bg-gradient-to-br from-accent-soft to-neutral-soft flex items-center justify-center" aria-hidden>
+        <span className="font-mono text-xs text-ink-3">{s.sku}</span>
+      </div>
+      <div className="p-5">
+        <p className="eyebrow">Confirm this purchase</p>
+        <h2 className="font-semibold text-lg mt-1">{title.text}</h2>
+        <p className="text-2xl font-semibold mt-1">{money((s.price_cents * s.quantity) / 100, s.currency)}</p>
+        <ul className="mt-3 space-y-1.5 text-sm">
+          {rest.map((l, i) => (
+            <CardRow key={i} line={l} />
+          ))}
+        </ul>
+        <p className="mt-4 text-xs text-ink-3">The exact text above is hashed (SHA-256) and signed when you confirm.</p>
+      </div>
+    </div>
+  );
+}
+
+function CardRow({ line }: { line: CardLine }) {
+  switch (line.kind) {
+    case "warning":
+      return <li className="rounded-lg bg-warning-soft text-warning font-semibold px-3 py-2 my-2">{line.text}</li>;
+    case "heading":
+      return <li className="eyebrow pt-3">{line.text}</li>;
+    case "met":
+      return (
+        <li className="flex gap-2">
+          <span aria-hidden className="text-success">✓</span>
+          <span>{line.text}</span>
+        </li>
+      );
+    case "unmet":
+      return (
+        <li className="flex gap-2 text-warning font-medium">
+          <span aria-hidden>!</span>
+          <span>{line.text}</span>
+        </li>
+      );
+    case "unknown":
+      return (
+        <li className="flex gap-2 text-ink-3">
+          <span aria-hidden>?</span>
+          <span>{line.text}</span>
+        </li>
+      );
+    case "assumption":
+      return <li className="text-ink-2 pl-4 border-l-2 border-line">{line.text}</li>;
+    default:
+      return <li className="text-ink-2">{line.text}</li>;
+  }
+}
