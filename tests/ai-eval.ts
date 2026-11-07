@@ -14,6 +14,7 @@ async function main() {
   if (!aiStatus().available) throw new Error(`AI unavailable: ${aiStatus().reason}`);
   const runs = Number(process.argv[2] ?? 5);
   process.env.DATABASE_PATH = ":memory:";
+  process.env.SKIP_AUTO_ANALYSIS = "1";
   resetTestDb();
   console.log(`Model: ${env.aiProvider}/${env.aiModelAnalyst} · ${runs} runs per scenario · ${new Date().toISOString()}\n`);
   console.log("| Scenario | Expected action | Expected action hit | Classification hit | Verified ratio (after validation) | Raw citation pass rate |");
@@ -30,6 +31,7 @@ async function main() {
       try {
         const { output, validation } = await runAnalyst(ctx);
         if (output.recommended_seller_action === s.expected.action) actionHit++;
+        else console.error(`  ${s.key} run ${i + 1} chose ${output.recommended_seller_action} (${output.classification})`);
         if (output.classification === s.expected.classification) classHit++;
         verified += validation.verified;
         shown += validation.verified; // only verified items are ever shown

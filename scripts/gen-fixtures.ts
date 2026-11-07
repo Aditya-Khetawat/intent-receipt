@@ -15,6 +15,7 @@ import { env } from "../src/lib/env";
 async function main() {
   if (!aiStatus().available) throw new Error(`AI unavailable: ${aiStatus().reason}`);
   process.env.DATABASE_PATH = ":memory:";
+  process.env.SKIP_AUTO_ANALYSIS = "1";
   resetTestDb();
   for (const s of SCENARIOS) {
     const id = (await simulateScenarioDispute(s.key))!;

@@ -196,6 +196,8 @@ export async function analyzeDispute(disputeId: string, analyst?: AnalystFn): Pr
 
 /** Fire-and-forget (in-process queue; the AI provider layer limits concurrency). */
 export function enqueueAnalysis(disputeId: string) {
+  // Eval/fixture scripts run the analyst themselves and must not pay for a second call.
+  if (process.env.SKIP_AUTO_ANALYSIS === "1") return;
   void analyzeDispute(disputeId);
 }
 

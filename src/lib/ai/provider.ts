@@ -90,12 +90,13 @@ function recordUsage(kind: string, usage: { inputTokens?: number; outputTokens?:
     .run(`use_${ulid()}`, kind, modelId(kindModel), usage?.inputTokens ?? null, usage?.outputTokens ?? null, nowIso());
 }
 
-const MAX_CONCURRENT = 2;
+// Groq's free tier is 8K tokens/minute, so parallel calls only starve each other.
+const maxConcurrent = () => (env.aiProvider === "groq" ? 1 : 2);
 let active = 0;
 const waiting: (() => void)[] = [];
 
 async function queued<T>(fn: () => Promise<T>): Promise<T> {
-  if (active >= MAX_CONCURRENT) await new Promise<void>((r) => waiting.push(r));
+  if (active >= maxConcurrent()) await new Promise<void>((r) => waiting.push(r));
   active++;
   try {
     return await fn();
@@ -110,14 +111,24 @@ function isRateLimit(e: unknown): boolean {
   return err?.statusCode === 429 || err?.status === 429 || /429|rate limit|quota|RESOURCE_EXHAUSTED/i.test(err?.message ?? "");
 }
 
+// Free tiers are tokens-per-minute bound (Groq: 8K TPM), so honour the provider's
+// retry-after when it is short enough to wait for; otherwise fail fast.
+const MAX_WAIT_MS = 30_000;
+function retryAfterMs(e: unknown): number | null {
+  const h = (e as { responseHeaders?: Record<string, string> })?.responseHeaders?.["retry-after"];
+  const s = h === undefined ? NaN : Number(h);
+  return Number.isFinite(s) ? Math.ceil(s * 1000) + 250 : null;
+}
+
 async function withBackoff<T>(fn: () => Promise<T>): Promise<T> {
-  const delays = [1500, 4000];
+  const delays = [1500, 4000, 8000];
   for (let i = 0; ; i++) {
     try {
       return await fn();
     } catch (e) {
-      if (i < delays.length && isRateLimit(e)) {
-        await new Promise((r) => setTimeout(r, delays[i]));
+      const wait = retryAfterMs(e) ?? delays[i];
+      if (i < delays.length && isRateLimit(e) && wait <= MAX_WAIT_MS) {
+        await new Promise((r) => setTimeout(r, wait));
         continue;
       }
       if (isRateLimit(e)) throw new AiUnavailableError("The AI provider is rate limiting requests. Try again in a minute.", "RATE_LIMIT");
@@ -144,6 +155,7 @@ export async function runAgentTurn(opts: { system: string; messages: ModelMessag
         messages: opts.messages,
         tools: opts.tools,
         stopWhen: isStepCount(8),
+        providerOptions: { groq: { reasoningEffort: "low" } },
         temperature: 0.2,
         maxOutputTokens: 1200,
         maxRetries: 0,
@@ -175,7 +187,7 @@ export async function generateStructured<S extends z.ZodTypeAny>(opts: {
         prompt: opts.prompt,
         output: Output.object({ schema: opts.schema }),
         // Groq's strict mode rejects min/max keywords; zod still validates the result.
-        providerOptions: { groq: { strictJsonSchema: false } },
+        providerOptions: { groq: { strictJsonSchema: false, reasoningEffort: "low" } },
         temperature: 0.1,
         maxOutputTokens: 4000,
         maxRetries: 0,
