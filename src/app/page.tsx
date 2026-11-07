@@ -1,69 +1,140 @@
-import Image from "next/image";
+import Link from "next/link";
+import { appStatus } from "@/lib/views";
+
+export const dynamic = "force-dynamic";
 
 export default function Home() {
+  const s = appStatus();
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="mx-auto max-w-6xl px-4">
+      <section className="pt-14 pb-10 grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center">
+        <div>
+          <p className="eyebrow mb-3">Accountability for agentic commerce on PayPal</p>
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.08]">
+            Receipts for what the AI
+            <br />
+            was asked to do.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-5 text-lg text-ink-2 max-w-xl">
+            When an AI agent buys something for you, nobody can prove what you asked for, what the agent understood or what you confirmed.
+            IntentReceipt records all three, signs them into a tamper-evident ledger linked to the PayPal order, and uses AI to resolve disputes
+            with evidence that is checked against the record, fairly for buyer and seller.
           </p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link href="/demo" className="btn btn-primary">
+              Run guided demo
+            </Link>
+            <Link href="/shop" className="btn btn-secondary">
+              Shop with the agent
+            </Link>
+            <Link href="/merchant" className="btn btn-secondary">
+              Open merchant console
+            </Link>
+          </div>
+          <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <Status ok={s.paypal.configured} label="PayPal sandbox" okText="connected" offText="not configured (checkout is simulated)" />
+            <Status ok={s.ai.available} label={`AI (${s.ai.provider})`} okText={s.ai.agentModel} offText="no key (cached analyses only)" />
+          </dl>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <ReceiptIllustration />
+      </section>
+
+      <section aria-labelledby="how" className="py-8">
+        <h2 id="how" className="text-xl font-semibold mb-5">
+          How it works
+        </h2>
+        <ol className="grid md:grid-cols-3 gap-4">
+          {[
+            {
+              n: "1",
+              t: "Intent is captured before payment",
+              d: "The shopping agent extracts your constraints. A deterministic checker (code, not the model) marks each one met or unmet on the confirmation card. Your confirmation and the exact card text are hashed, signed with Ed25519 and chained.",
+            },
+            {
+              n: "2",
+              t: "Linked to the PayPal order",
+              d: "The order is created with PayPal Orders v2 only after a signed confirmation exists, and only for the confirmed amount and item. The order carries the receipt id in custom_id. Capture is appended to the same chain.",
+            },
+            {
+              n: "3",
+              t: "Disputes get verified evidence",
+              d: "When a dispute arrives, an AI analyst reads the receipt, order and shipping history. Every citation it makes is a JSON path that code checks against the source. It recommends a refund when the agent was at fault. A human approves every action.",
+            },
+          ].map((s) => (
+            <li key={s.n} className="card p-5">
+              <span className="font-mono text-accent text-sm">0{s.n}</span>
+              <h3 className="font-semibold mt-1">{s.t}</h3>
+              <p className="text-sm text-ink-2 mt-2 leading-relaxed">{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="py-6 grid md:grid-cols-2 gap-4">
+        <div className="card p-5">
+          <h2 className="font-semibold">Who it is for</h2>
+          <ul className="mt-3 text-sm text-ink-2 space-y-2 list-disc pl-5">
+            <li>
+              <strong className="text-ink">Merchants</strong> accepting agent-initiated orders: contest the disputes you should win, refund the ones you
+              should not fight, and stop over-blocking agent traffic.
+            </li>
+            <li>
+              <strong className="text-ink">Dispute and risk teams</strong>: structured, verifiable evidence about intent instead of screenshots.
+            </li>
+            <li>
+              <strong className="text-ink">Agent developers</strong>: a receipt format and a signal when the agent, not the buyer, got it wrong.
+            </li>
+          </ul>
         </div>
-      </main>
+        <div className="card p-5">
+          <h2 className="font-semibold">Honest scope</h2>
+          <ul className="mt-3 text-sm text-ink-2 space-y-2 list-disc pl-5">
+            <li>PayPal sandbox only. No real money, no production credentials.</li>
+            <li>Seeded demo orders and demo disputes are labelled SIMULATED; precomputed analyses are labelled CACHED.</li>
+            <li>The ledger is tamper-evident (hash chain + signature), not a blockchain. Inspired by agent payment mandates; not an AP2 implementation.</li>
+            <li>The analyst recommends; it does not adjudicate liability. A human approves every action.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Status({ ok, label, okText, offText }: { ok: boolean; label: string; okText: string; offText: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span aria-hidden className={`h-2 w-2 rounded-full ${ok ? "bg-success" : "bg-warning"}`} />
+      <dt className="text-ink-2">{label}:</dt>
+      <dd className="text-ink">{ok ? okText : offText}</dd>
+    </div>
+  );
+}
+
+function ReceiptIllustration() {
+  const rows = [
+    ["You asked", "waterproof 40L backpack, black, under $85"],
+    ["Agent chose", "Brightpine Ridge Pack · 40L · black · $79"],
+    ["Checker", "4 of 4 requirements met"],
+    ["You confirmed", "sha256 3f9a…c21e"],
+    ["PayPal", "order · capture COMPLETED"],
+  ];
+  return (
+    <div className="card p-6 rotate-[0.4deg]" aria-hidden="true">
+      <div className="flex items-center justify-between">
+        <span className="eyebrow">Intent receipt</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wide bg-success-soft text-success rounded-md px-1.5 py-0.5">Chain intact</span>
+      </div>
+      <dl className="mt-4 divide-y divide-line">
+        {rows.map(([k, v]) => (
+          <div key={k} className="py-2.5 grid grid-cols-[110px_1fr] gap-3 text-sm">
+            <dt className="text-ink-3">{k}</dt>
+            <dd className={k === "You confirmed" ? "font-mono text-[13px]" : ""}>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-4 border-t border-dashed border-line pt-3 font-mono text-[11px] text-ink-3 leading-5">
+        seq 41 → 42 → 43 · Ed25519 · ir-key-1
+      </div>
     </div>
   );
 }
