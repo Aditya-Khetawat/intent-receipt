@@ -4,12 +4,13 @@ import AxeBuilder from "@axe-core/playwright";
 // Guided-demo smoke: reset, trigger S1, see the analysis, open the detail, approve (simulated).
 test("guided demo: S1 dispute end to end", async ({ page }) => {
   await page.goto("/demo");
-  await page.getByRole("button", { name: "Reset demo data" }).click();
+  await page.getByRole("button", { name: "Reset demo data…" }).click();
+  await page.getByRole("button", { name: "Yes, reset for everyone" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Demo data reset." })).toBeVisible();
 
   await page.getByRole("button", { name: /Trigger S1/ }).click();
   await page.waitForURL(/\/merchant\/disputes\//);
-  await expect(page.getByText(/evidence items verified against source data/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/\d+ of \d+ kept/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Contest", { exact: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Review request…" }).click();

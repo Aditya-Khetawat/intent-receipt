@@ -33,6 +33,7 @@ export function DemoRunner({
   const [disputes, setDisputes] = useState<Record<string, string | null>>(Object.fromEntries(scenarios.map((s) => [s.key, s.disputeId])));
   const [error, setError] = useState<string | null>(null);
   const [resetDone, setResetDone] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   async function trigger(key: string) {
     setBusy(key);
@@ -48,6 +49,7 @@ export function DemoRunner({
   }
 
   async function reset() {
+    setConfirmReset(false);
     setBusy("reset");
     setError(null);
     try {
@@ -76,40 +78,25 @@ export function DemoRunner({
     <div className="mx-auto max-w-4xl px-4 py-8">
       <h1 className="text-3xl font-semibold tracking-tight">Guided demo</h1>
       <p className="text-ink-2 mt-2 max-w-[70ch]">
-        A five-minute path through the product, no accounts needed. Payments run on the PayPal sandbox
-        {paypalConfigured ? "" : " (not configured on this server, so checkout is simulated)"}. Seeded history and demo disputes are clearly
+        Steps 1 to 3 show the whole idea in about two minutes, with no accounts. Step 4 lets you shop and pay yourself on the PayPal sandbox
+        {paypalConfigured ? "" : " (not configured on this server, so checkout is simulated)"}. Seeded history and demo disputes are
         labelled SIMULATED and travel through the same ingest code as real PayPal webhooks.
         {!aiAvailable && " The live AI key is not configured here, so analyses show as CACHED."}
       </p>
 
       <ol className="mt-8 space-y-4">
-        <Step n={1} title="Meet the buyer and the agent">
+        <Step n={1} title="Open a receipt and press Verify">
           <p>
-            Ask the shopping agent for a backpack. Watch the deterministic constraint check on the confirmation card, confirm, and pay in
-            the PayPal sandbox.
-          </p>
-          {paypalConfigured && (
-            <p className="text-sm mt-2 text-ink-3">
-              PayPal will ask you to log in with a sandbox buyer account; the test credentials are in the README (sandbox only).
-            </p>
-          )}
-          <Link href={`/shop?prompt=${encodeURIComponent(S1_PROMPT)}`} className="btn btn-primary mt-3">
-            Open the shop with the S1 request
-            <ArrowIcon />
-          </Link>
-        </Step>
-
-        <Step n={2} title="Open an Intent Receipt and press Verify">
-          <p>
-            Each order links to a receipt: what you asked, what the agent chose, the constraint check, the exact confirmation text and its
-            hash, all signed and chained.
+            A receipt records what the buyer asked, what the agent chose, the code&apos;s check, and the exact card the buyer confirmed, all
+            signed and chained. Verify re-checks the chain in your browser. Then compare with S2, where the agent got it wrong.
           </p>
           <div className="flex flex-wrap gap-2 mt-3">
-            <Link href={`/receipt/${scenarios[0].intentId}`} className="btn btn-secondary">
+            <Link href={`/receipt/${scenarios[0].intentId}`} className="btn btn-primary">
               S1 receipt
+              <ArrowIcon />
             </Link>
             <Link href={`/receipt/${scenarios[1].intentId}`} className="btn btn-secondary">
-              S2 receipt (agent fault)
+              S2 receipt (agent at fault)
             </Link>
             <Link href="/orders" className="btn btn-ghost">
               All orders
@@ -117,10 +104,10 @@ export function DemoRunner({
           </div>
         </Step>
 
-        <Step n={3} title="Trigger a dispute and watch the analyst">
+        <Step n={2} title="Trigger a dispute and watch the analyst">
           <p>
-            Each button builds a payload shaped like PayPal&apos;s CUSTOMER.DISPUTE.CREATED webhook and feeds it through the real ingest
-            pipeline.
+            Each button builds a payload shaped like PayPal&apos;s dispute-created webhook and feeds it through the real ingest pipeline.
+            The hint says what a correct analysis looks like.
           </p>
           <ul className="mt-3 grid sm:grid-cols-2 gap-3">
             {scenarios.map((s) => (
@@ -158,13 +145,28 @@ export function DemoRunner({
           </ul>
         </Step>
 
-        <Step n={4} title="Review in the merchant console">
+        <Step n={3} title="Decide in the merchant console">
           <p>
-            The AG Grid queue shows classification, confidence, agent fault and the recommendation. In a dispute, check the N/N verified
-            evidence, the balanced buyer and seller views, edit the drafts and approve.
+            The queue shows each dispute&apos;s analysis, confidence and recommendation. In a dispute, see which citations the code kept and
+            which it rejected, read both sides, edit the drafts and approve the exact request.
           </p>
           <Link href="/merchant" className="btn btn-secondary mt-3">
             Open merchant console
+          </Link>
+        </Step>
+
+        <Step n={4} title="Shop with the agent and pay (optional)">
+          <p>
+            Ask the agent for a backpack, watch the code check each requirement on the confirmation card, confirm, and pay in the PayPal
+            sandbox. Your order gets its own receipt.
+          </p>
+          {paypalConfigured && (
+            <p className="text-sm mt-2 text-ink-3">
+              PayPal asks you to log in with a sandbox buyer account; the test credentials are in the README (sandbox only).
+            </p>
+          )}
+          <Link href={`/shop?prompt=${encodeURIComponent(S1_PROMPT)}`} className="btn btn-secondary mt-3">
+            Open the shop with the S1 request
           </Link>
         </Step>
 
@@ -173,16 +175,38 @@ export function DemoRunner({
             Removes simulated disputes, unconfirmed drafts and chats so the next visitor starts clean. Signed receipts, real sandbox orders
             and real disputes are kept.
           </p>
-          <button type="button" className="btn btn-secondary mt-3" onClick={reset} disabled={busy !== null} aria-busy={busy === "reset"}>
-            <BusyLabel busy={busy === "reset"} busyText="Resetting…">
-              Reset demo data
-            </BusyLabel>
-          </button>
-          {resetDone && (
-            <span className="reveal ml-3 text-sm text-success" role="status">
-              Demo data reset.
-            </span>
-          )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {confirmReset ? (
+              <>
+                <button type="button" className="btn btn-warning" onClick={reset}>
+                  Yes, reset for everyone
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => setConfirmReset(false)}>
+                  Keep data
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setResetDone(false);
+                  setConfirmReset(true);
+                }}
+                disabled={busy !== null}
+                aria-busy={busy === "reset"}
+              >
+                <BusyLabel busy={busy === "reset"} busyText="Resetting…">
+                  Reset demo data…
+                </BusyLabel>
+              </button>
+            )}
+            {resetDone && (
+              <span className="reveal text-sm text-success" role="status">
+                Demo data reset.
+              </span>
+            )}
+          </div>
         </Step>
       </ol>
       {error && (

@@ -5,8 +5,8 @@ No account needed. Everything simulated or cached is labelled on screen.
 1. **Open https://intentreceipt.onrender.com**. The landing page explains the problem; click **Run guided demo**.
 2. **Buyer** (`/shop`): the S1 request is prefilled. The agent searches the fictional catalog and proposes one item. The confirmation card shows a constraint check computed by code. Click **Confirm**, then pay with the PayPal sandbox button (sandbox buyer login is in the README). You land on a button to the **Intent Receipt**.
 3. **Receipt** (`/receipt/...`): press **Verify**. Your browser recomputes every SHA-256 hash and checks the Ed25519 signatures. Download the receipt JSON if you like.
-4. **Dispute** (`/demo`, step 3): trigger **S1**. A PayPal-shaped dispute event goes through the same ingest as a real webhook. The analyst runs.
-5. **Merchant console** (`/merchant`): the AG Grid queue shows classification, confidence, agent fault and recommendation. Open S1: "N/N evidence items verified against source data", buyer and seller views side by side, editable drafts, **Review request** shows the exact PayPal API call, **Approve (simulated send)**.
+4. **Dispute** (`/demo`, step 2): trigger **S1**. A PayPal-shaped dispute event goes through the same ingest as a real webhook. The analyst runs.
+5. **Merchant console** (`/merchant`): the AG Grid queue shows classification, confidence, agent fault and recommendation. Open S1: the verdict strip shows the recommendation and how many citations the code kept (any rejected ones are listed with the reason), what the buyer asked next to the card they confirmed, buyer and seller views, editable drafts, **Review request** shows the exact PayPal API call, **Approve (simulated send)**.
 6. **S2**: the analyst recommends **Accept and refund** because the (legacy) agent broke two constraints and the card hid it. **S4**: the buyer's message tries to instruct the AI; it is flagged and ignored.
 
 ## Where each criterion lives in the code

@@ -261,7 +261,11 @@ export function ShopClient({
           {proposal && phase === "proposed" && (
             <motion.div key="actions" {...step} className="flex gap-2">
               <button type="button" className={`btn flex-1 ${unmet ? "btn-warning" : "btn-primary"}`} onClick={confirm}>
-                {unmet ? "Confirm anyway" : "Confirm"}
+                {unmet ? "Confirm anyway" : "Confirm and sign"} ·{" "}
+                {money(
+                  (proposal.record.selection.price_cents * proposal.record.selection.quantity) / 100,
+                  proposal.record.selection.currency,
+                )}
               </button>
               <button type="button" className="btn btn-secondary" onClick={change}>
                 Change
@@ -348,9 +352,9 @@ function ConfirmationCard({ proposal }: { proposal: Proposal }) {
   const [title, ...rest] = proposal.card;
   return (
     <div className="card overflow-hidden">
-      <div className="h-28 bg-gradient-to-br from-accent-soft to-neutral-soft flex flex-col items-center justify-center gap-1">
+      <div className="flex items-center justify-between gap-3 bg-accent-soft px-5 py-2.5">
         <span className="text-sm font-semibold text-accent">Confirm this purchase</span>
-        <span className="font-mono text-xs text-ink-3">{s.sku}</span>
+        <span className="text-xs text-ink-3">proposed by the agent</span>
       </div>
       <div className="p-5">
         <h2 className="font-semibold text-lg">{title.text}</h2>
