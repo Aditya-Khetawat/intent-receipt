@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-11-07T00:00:00.000Z",
+  "origin": "hand-authored placeholder written before any live model run; regenerate with `npm run gen-fixtures` once an AI key is set",
+  "model": "none (hand-authored)",
+  "scenario": "S2",
+  "output": {
+    "classification": "AGENT_MISINTERPRETATION",
+    "confidence": 0.9,
+    "agent_fault": "LIKELY",
+    "recommended_seller_action": "ACCEPT_AND_REFUND",
+    "summary": "The buyer asked for a 2 m white cable. The legacy agent chose a 1 m black cable, the constraint check marks length and color as UNMET, and the confirmation text did not disclose either deviation. The seller should refund.",
+    "evidence": [
+      { "id": "e1", "claim": "The buyer asked for 2 m and white.", "supports": "BUYER", "pointer": "/intent/request/verbatim", "quoted_value": "USB-C fast-charge cable, 2 m, white, under $20" },
+      { "id": "e2", "claim": "The length requirement was not met.", "supports": "BUYER", "pointer": "/intent/constraint_check/results/2/status", "quoted_value": "UNMET" },
+      { "id": "e3", "claim": "The selected cable is 1 m.", "supports": "BUYER", "pointer": "/intent/constraint_check/results/2/actual", "quoted_value": 1 },
+      { "id": "e4", "claim": "The color requirement was not met.", "supports": "BUYER", "pointer": "/intent/constraint_check/results/3/status", "quoted_value": "UNMET" },
+      { "id": "e5", "claim": "The order was placed by an older agent prompt version.", "supports": "NEUTRAL", "pointer": "/intent/agent/prompt_version", "quoted_value": "shop-agent@0.9" },
+      { "id": "e6", "claim": "The agent's rationale claimed a match.", "supports": "BUYER", "pointer": "/intent/selection/rationale", "quoted_value": "Matches the request: USB-C fast-charge cable under $20." }
+    ],
+    "buyer_view": "The buyer clearly asked for a 2 m white cable and was told the item matched; the card never mentioned it was 1 m and black.",
+    "seller_view": "The cable shipped as listed and was delivered, but the seller's own agent made the wrong selection without disclosure. Contesting would likely fail and harm trust.",
+    "seller_response_draft": "We accept this claim. Our shopping agent selected a 1 m black cable for a request that specified 2 m and white, and the confirmation did not disclose the difference. We are refunding the buyer in full.",
+    "buyer_message_draft": "You're right, and we're sorry. Our shopping assistant picked the wrong cable and didn't tell you. We're refunding you in full; no need to send it back.",
+    "uncertainties": ["The legacy confirmation card is only available as the stored text in the intent record."]
+  }
+}

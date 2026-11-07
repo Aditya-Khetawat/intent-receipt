@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-11-07T00:00:00.000Z",
+  "origin": "hand-authored placeholder written before any live model run; regenerate with `npm run gen-fixtures` once an AI key is set",
+  "model": "none (hand-authored)",
+  "scenario": "S3",
+  "output": {
+    "classification": "ITEM_NOT_RECEIVED",
+    "confidence": 0.92,
+    "agent_fault": "NONE",
+    "recommended_seller_action": "ACCEPT_AND_REFUND",
+    "summary": "The intent record is clean, but the carrier reported a delivery exception and returned the parcel to the sender, so the buyer never received the item.",
+    "evidence": [
+      { "id": "e1", "claim": "The parcel did not reach the buyer.", "supports": "BUYER", "pointer": "/fulfillment/events/2/status", "quoted_value": "DELIVERY_EXCEPTION" },
+      { "id": "e2", "claim": "The carrier returned it to the sender.", "supports": "BUYER", "pointer": "/fulfillment/events/2/detail", "quoted_value": "Address not found, returned to sender" },
+      { "id": "e3", "claim": "The agent's selection met the color requirement.", "supports": "SELLER", "pointer": "/intent/constraint_check/results/2/status", "quoted_value": "MET" },
+      { "id": "e4", "claim": "The dispute reason is non-receipt.", "supports": "NEUTRAL", "pointer": "/dispute/reason", "quoted_value": "MERCHANDISE_OR_SERVICE_NOT_RECEIVED" }
+    ],
+    "buyer_view": "The buyer paid and never got the dry bag.",
+    "seller_view": "The agent's choice was correct, but the shipment failed and the item came back. The fair outcome is a refund or a reshipment.",
+    "seller_response_draft": "Tracking shows a delivery exception (address not found) and the parcel was returned to us. We are refunding the buyer in full.",
+    "buyer_message_draft": "Sorry, the carrier couldn't find your address and returned the parcel to us. We've refunded you in full. If you'd like it reshipped, reply with your full address.",
+    "uncertainties": ["Whether the address error came from the buyer or the carrier."]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-11-07T00:00:00.000Z",
+  "origin": "hand-authored placeholder written before any live model run; regenerate with `npm run gen-fixtures` once an AI key is set",
+  "model": "none (hand-authored)",
+  "scenario": "S1",
+  "output": {
+    "classification": "BUYER_CHANGED_MIND",
+    "confidence": 0.86,
+    "agent_fault": "NONE",
+    "recommended_seller_action": "CONTEST",
+    "summary": "The buyer asked for a waterproof 40L black backpack under $85, confirmed a card showing exactly that, and the matching SKU was delivered. The complaint that it is too big contradicts the buyer's own request.",
+    "evidence": [
+      { "id": "e1", "claim": "The buyer's own request specified 40L.", "supports": "SELLER", "pointer": "/intent/request/verbatim", "quoted_value": "I need a waterproof 40L backpack in black, under $85, for a trip next month." },
+      { "id": "e2", "claim": "The deterministic check found the capacity requirement met.", "supports": "SELLER", "pointer": "/intent/constraint_check/results/1/status", "quoted_value": "MET" },
+      { "id": "e3", "claim": "The selected variant is 40L.", "supports": "SELLER", "pointer": "/intent/selection/variant_attributes/size", "quoted_value": "40L" },
+      { "id": "e4", "claim": "The SKU confirmed by the buyer is the 40L black pack.", "supports": "SELLER", "pointer": "/intent/selection/sku", "quoted_value": "BP-RIDGE-40-BLK" },
+      { "id": "e5", "claim": "The parcel was delivered.", "supports": "SELLER", "pointer": "/fulfillment/events/3/status", "quoted_value": "DELIVERED" },
+      { "id": "e6", "claim": "The buyer says the size is wrong.", "supports": "BUYER", "pointer": "/dispute/buyer_claim_text", "quoted_value": "The backpack is way too big for me. I never asked for this size. I want my money back." }
+    ],
+    "buyer_view": "The buyer finds the pack too big in practice and may not have pictured what 40 litres looks like.",
+    "seller_view": "The buyer explicitly asked for 40L, saw 40L on the confirmation card, confirmed it, and received the exact SKU. This is a change of mind, not a fault.",
+    "seller_response_draft": "The buyer requested a 40L waterproof black backpack under $85 and confirmed a card showing the 40L black Ridge Pack at $79. Order records and carrier tracking show SKU BP-RIDGE-40-BLK was delivered. We are happy to accept a return within our 30-day return window.",
+    "buyer_message_draft": "Hi, sorry the pack feels too big. Our records show the 40L size you requested. You are welcome to return it within 30 days, or we can help you exchange it for the 30L version.",
+    "uncertainties": ["Whether the buyer would accept an exchange for the 30L variant."]
+  }
+}
