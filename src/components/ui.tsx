@@ -42,6 +42,46 @@ export const SourceBadge = ({ simulated, cached }: { simulated: boolean; cached?
   </span>
 );
 
+/** Inline loader sized to the surrounding text; pair it with visible text that names the work. */
+export const Spinner = () => <span className="spinner" aria-hidden="true" />;
+
+/** Button label that swaps to a spinner plus progress text while `busy`. */
+export function BusyLabel({ busy, busyText, children }: { busy: boolean; busyText: string; children: ReactNode }) {
+  return busy ? (
+    <>
+      <Spinner />
+      {busyText}
+    </>
+  ) : (
+    <>{children}</>
+  );
+}
+
+export function CheckIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
+export function AlertIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3.5 2.8 19.5h18.4L12 3.5Z" />
+      <path d="M12 10v4M12 17v.01" />
+    </svg>
+  );
+}
+
+export function CrossIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </svg>
+  );
+}
+
 export function money(amount: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import type { CardLine, IntentRecord } from "@/lib/intents";
-import { Badge, money } from "./ui";
+import { AlertIcon, Badge, CheckIcon, Spinner, money } from "./ui";
 
 interface Msg {
   role: "user" | "agent" | "system";
@@ -146,10 +146,10 @@ export function ShopClient({
         </div>
         <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3" aria-live="polite" aria-busy={busy}>
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={i} className={`reveal flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap ${
-                  m.role === "user" ? "bg-ink text-white" : m.role === "system" ? "bg-warning-soft text-warning text-sm" : "bg-neutral-soft"
+                  m.role === "user" ? "bg-ink text-on-strong" : m.role === "system" ? "bg-warning-soft text-warning text-sm" : "bg-neutral-soft"
                 }`}
               >
                 {m.text}
@@ -157,8 +157,13 @@ export function ShopClient({
             </div>
           ))}
           {busy && (
-            <div className="flex gap-2 items-center text-sm text-ink-3" role="status">
-              <span className="skeleton h-3 w-24" /> Agent is searching the catalog…
+            <div className="reveal flex items-center gap-3 text-sm text-ink-3" role="status">
+              <span className="typing inline-flex items-center gap-1 rounded-xl bg-neutral-soft px-3.5 py-3" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              Agent is searching the catalog…
             </div>
           )}
           {aiDown && (
@@ -175,7 +180,7 @@ export function ShopClient({
           {messages.length <= 1 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" className="text-left text-xs rounded-full border border-line px-3 py-1.5 hover:bg-neutral-soft" onClick={() => setInput(s)}>
+                <button key={s} type="button" className="text-left text-xs text-ink-2 rounded-full border border-line px-3 py-1.5 transition-colors hover:bg-neutral-soft hover:text-ink hover:border-line-strong" onClick={() => setInput(s)}>
                   {s}
                 </button>
               ))}
@@ -193,14 +198,15 @@ export function ShopClient({
             </label>
             <input
               id="chat-input"
-              className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-[15px] min-w-0"
+              className="field flex-1 px-3 py-2 text-[15px] min-w-0"
               placeholder="e.g. a waterproof 40L backpack in black under $85"
               value={input}
               maxLength={600}
               onChange={(e) => setInput(e.target.value)}
               disabled={busy || phase === "done"}
             />
-            <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()}>
+            <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()} aria-busy={busy}>
+              {busy ? <Spinner /> : null}
               Send
             </button>
           </form>
@@ -226,7 +232,11 @@ export function ShopClient({
             </button>
           </div>
         )}
-        {phase === "confirming" && <p className="text-sm text-ink-3" role="status">Signing your confirmation…</p>}
+        {phase === "confirming" && (
+          <p className="flex items-center gap-2 text-sm text-ink-3" role="status">
+            <Spinner /> Signing your confirmation…
+          </p>
+        )}
         {(phase === "pay" || phase === "capturing") && proposal && (
           <div className="card p-4 space-y-3">
             <p className="text-sm">
@@ -253,11 +263,15 @@ export function ShopClient({
                 </button>
               </div>
             )}
-            {phase === "capturing" && <p className="text-sm text-ink-3" role="status">Capturing payment…</p>}
+            {phase === "capturing" && (
+              <p className="flex items-center gap-2 text-sm text-ink-3" role="status">
+                <Spinner /> Capturing payment…
+              </p>
+            )}
           </div>
         )}
         {phase === "done" && proposal && (
-          <div className="card p-5 border-success/40" role="status">
+          <div className="reveal card p-5 border-success/40" role="status">
             <p className="font-semibold text-success">Payment captured</p>
             <p className="text-sm text-ink-2 mt-1">Your request, the agent&apos;s choice and your confirmation are linked to the PayPal order.</p>
             <Link href={`/receipt/${proposal.id}`} className="btn btn-primary w-full mt-4">
@@ -307,14 +321,14 @@ function CardRow({ line }: { line: CardLine }) {
     case "met":
       return (
         <li className="flex gap-2">
-          <span aria-hidden className="text-success">✓</span>
+          <CheckIcon className="text-success mt-0.5 shrink-0" />
           <span>{line.text}</span>
         </li>
       );
     case "unmet":
       return (
         <li className="flex gap-2 text-warning font-medium">
-          <span aria-hidden>!</span>
+          <AlertIcon className="mt-0.5 shrink-0" />
           <span>{line.text}</span>
         </li>
       );

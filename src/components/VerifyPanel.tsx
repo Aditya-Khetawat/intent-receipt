@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BusyLabel, CheckIcon, CrossIcon } from "./ui";
 import {
   bytesToHex,
   entryBodyInput,
@@ -69,13 +70,16 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
             Server check: {serverOk ? `chain intact, ${count} entries, key ${keyId}` : "FAILED"}. Run the check yourself in this browser:
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={verify} disabled={result.state === "running"}>
-          {result.state === "running" ? "Verifying…" : "Verify"}
+        <button type="button" className="btn btn-primary" onClick={verify} disabled={result.state === "running"} aria-busy={result.state === "running"}>
+          <BusyLabel busy={result.state === "running"} busyText="Verifying…">
+            Verify
+          </BusyLabel>
         </button>
       </div>
       {result.state === "ok" && (
-        <div className="mt-4 rounded-lg bg-success-soft text-success p-3 font-semibold" role="status">
-          ✓ Chain intact, {result.count} entries, signed by {result.keyId}.
+        <div className="reveal mt-4 rounded-lg bg-success-soft text-success p-3 font-semibold" role="status">
+          <CheckIcon className="inline -mt-0.5 mr-1.5" />
+          Chain intact, {result.count} entries, signed by {result.keyId}.
           <span className="block font-normal text-sm mt-1">
             SHA-256 recomputed in your browser.{" "}
             {result.sigMode === "browser" ? "Ed25519 signatures verified in your browser." : "Your browser lacks Ed25519 in Web Crypto, so signatures were verified on the server."}
@@ -83,8 +87,9 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
         </div>
       )}
       {result.state === "fail" && (
-        <div className="mt-4 rounded-lg bg-danger-soft text-danger p-3 font-semibold" role="alert">
-          ✗ Verification failed{result.seq ? ` at seq ${result.seq}` : ""}: {result.reason}
+        <div className="reveal mt-4 rounded-lg bg-danger-soft text-danger p-3 font-semibold" role="alert">
+          <CrossIcon className="inline -mt-0.5 mr-1.5" />
+          Verification failed{result.seq ? ` at seq ${result.seq}` : ""}: {result.reason}
         </div>
       )}
     </section>

@@ -6,23 +6,27 @@ import { useRouter } from "next/navigation";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type GridApi, type ICellRendererParams } from "ag-grid-community";
 import type { QueueRow } from "@/lib/views";
-import { ACTION_TONE, Badge, FAULT_TONE, SourceBadge, humanize, money, shortDate } from "./ui";
+import { ACTION_TONE, Badge, BusyLabel, FAULT_TONE, SourceBadge, Spinner, humanize, money, shortDate } from "./ui";
 import { simulateDispute } from "./SimulateDisputeButton";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const gridTheme = themeQuartz.withParams({
-  accentColor: "#0B6B6A",
-  backgroundColor: "#FFFFFF",
-  foregroundColor: "#14181F",
-  borderColor: "#E4E0D8",
-  headerBackgroundColor: "#F7F5F0",
-  headerTextColor: "#4A5160",
-  rowHoverColor: "#F3F7F6",
+  // Read live from the design tokens so the grid follows light and dark themes.
+  accentColor: "var(--accent)",
+  backgroundColor: "var(--surface)",
+  foregroundColor: "var(--ink)",
+  borderColor: "var(--line)",
+  headerBackgroundColor: "var(--paper)",
+  headerTextColor: "var(--ink-2)",
+  rowHoverColor: "var(--row-hover)",
+  selectedRowBackgroundColor: "var(--accent-soft)",
+  inputBackgroundColor: "var(--surface)",
+  inputBorder: { color: "var(--line)" },
   fontFamily: "inherit",
   fontSize: 13,
   headerFontWeight: 600,
-  wrapperBorderRadius: 10,
+  wrapperBorderRadius: 12,
   spacing: 7,
 });
 
@@ -194,8 +198,8 @@ export function MerchantConsole({
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="eyebrow">Fernhill Outfitters · merchant console</p>
-          <h1 className="text-2xl font-semibold">Disputes</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Disputes</h1>
+          <p className="text-sm text-ink-3 mt-0.5">Fernhill Outfitters · merchant console</p>
         </div>
         <p className="text-sm text-ink-3 max-w-md">AI recommends, you decide. Nothing is sent to PayPal until you click Approve.</p>
       </div>
@@ -229,12 +233,13 @@ export function MerchantConsole({
             </label>
             <input
               id="quick"
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-sm w-full sm:w-72"
+              className="field px-3 py-2 text-sm w-full sm:w-72"
               placeholder="Quick filter (buyer, reason, action…)"
               value={quick}
               onChange={(e) => setQuick(e.target.value)}
             />
-            <span className="text-xs text-ink-3" aria-live="polite">
+            <span className="inline-flex items-center gap-2 text-xs text-ink-3" aria-live="polite">
+              {pending && <Spinner />}
               {pending ? "Analysis running… updating live" : ""}
             </span>
           </div>
@@ -243,8 +248,10 @@ export function MerchantConsole({
               <p className="font-semibold">No disputes yet</p>
               <p className="text-sm text-ink-2 mt-1">Real sandbox disputes arrive by webhook. In demo mode you can load the four seeded scenarios.</p>
               {demoMode && (
-                <button type="button" className="btn btn-primary mt-4" onClick={loadDemo} disabled={loading}>
-                  {loading ? "Opening disputes…" : "Load demo disputes S1 to S4 (simulated)"}
+                <button type="button" className="btn btn-primary mt-4" onClick={loadDemo} disabled={loading} aria-busy={loading}>
+                  <BusyLabel busy={loading} busyText="Opening disputes…">
+                    Load demo disputes S1 to S4 (simulated)
+                  </BusyLabel>
                 </button>
               )}
               {error && <p className="text-sm text-danger mt-2">{error}</p>}
@@ -294,7 +301,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
   return (
     <div className="card p-4">
       <dt className="text-xs text-ink-3">{label}</dt>
-      <dd className="text-2xl font-semibold mt-1">{value}</dd>
+      <dd className="text-2xl font-semibold tracking-tight tabular-nums mt-1">{value}</dd>
       {hint && <dd className="text-xs text-ink-3 mt-0.5">{hint}</dd>}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge } from "./ui";
+import { Badge, BusyLabel } from "./ui";
 import { simulateDispute } from "./SimulateDisputeButton";
 
 interface ScenarioView {
@@ -73,9 +73,9 @@ export function DemoRunner({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <p className="eyebrow">Five-minute judge path · no accounts needed</p>
-      <h1 className="text-3xl font-semibold mt-1">Guided demo</h1>
-      <p className="text-ink-2 mt-2">
+      <h1 className="text-3xl font-semibold tracking-tight">Guided demo</h1>
+      <p className="text-ink-2 mt-2 max-w-[70ch]">
+        A five-minute path through the product, no accounts needed.{" "}
         Payments run on the PayPal sandbox{paypalConfigured ? "" : " (not configured on this server, so checkout is simulated)"}. Seeded history and demo disputes are clearly
         labelled SIMULATED and travel through the same ingest code as real PayPal webhooks.
         {!aiAvailable && " The live AI key is not configured here, so analyses show as CACHED."}
@@ -111,7 +111,7 @@ export function DemoRunner({
           <p>Each button builds a payload shaped like PayPal&apos;s CUSTOMER.DISPUTE.CREATED webhook and feeds it through the real ingest pipeline.</p>
           <ul className="mt-3 grid sm:grid-cols-2 gap-3">
             {scenarios.map((s) => (
-              <li key={s.key} className="rounded-lg border border-line p-3 bg-surface">
+              <li key={s.key} className="rounded-lg border border-line p-3 bg-surface transition-colors hover:border-line-strong">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm text-accent">{s.key}</span>
                   <span className="font-medium text-sm">{s.title}</span>
@@ -122,8 +122,10 @@ export function DemoRunner({
                     Open dispute
                   </Link>
                 ) : (
-                  <button type="button" className="btn btn-primary mt-2 w-full" disabled={busy !== null} onClick={() => trigger(s.key)}>
-                    {busy === s.key ? "Opening…" : `Trigger ${s.key}`} <Badge tone="warning">Simulated</Badge>
+                  <button type="button" className="btn btn-primary mt-2 w-full" disabled={busy !== null} aria-busy={busy === s.key} onClick={() => trigger(s.key)}>
+                    <BusyLabel busy={busy === s.key} busyText="Opening…">
+                      Trigger {s.key} <Badge tone="warning">Simulated</Badge>
+                    </BusyLabel>
                   </button>
                 )}
               </li>
@@ -143,11 +145,13 @@ export function DemoRunner({
             Removes simulated disputes, unconfirmed drafts and chats so the next visitor starts clean. Signed receipts, real sandbox orders and real
             disputes are kept.
           </p>
-          <button type="button" className="btn btn-secondary mt-3" onClick={reset} disabled={busy !== null}>
-            {busy === "reset" ? "Resetting…" : "Reset demo data"}
+          <button type="button" className="btn btn-secondary mt-3" onClick={reset} disabled={busy !== null} aria-busy={busy === "reset"}>
+            <BusyLabel busy={busy === "reset"} busyText="Resetting…">
+              Reset demo data
+            </BusyLabel>
           </button>
           {resetDone && (
-            <span className="ml-3 text-sm text-success" role="status">
+            <span className="reveal ml-3 text-sm text-success" role="status">
               Demo data reset.
             </span>
           )}

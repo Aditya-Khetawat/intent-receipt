@@ -20,24 +20,25 @@ export default async function ReceiptPage({ params }: PageProps<"/receipt/[inten
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-5">
       {!chain.ok && (
-        <div role="alert" className="rounded-lg bg-danger text-white p-4 font-semibold">
+        <div role="alert" className="rounded-lg bg-danger text-on-strong p-4 font-semibold">
           Ledger verification failed at seq {chain.first_bad_seq}: {chain.reason}. This receipt may have been tampered with.
         </div>
       )}
       <header className="card p-6">
-        <div className="flex flex-wrap items-center gap-2 justify-between">
-          <p className="eyebrow">Intent receipt · {r.schema_version}</p>
-          <div className="flex gap-2">
-            {order && <SourceBadge simulated={order.simulated} />}
-            <Badge tone={intent.status === "CAPTURED" ? "success" : "neutral"}>{intent.status}</Badge>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {order && <SourceBadge simulated={order.simulated} />}
+          <Badge tone={intent.status === "CAPTURED" ? "success" : "neutral"}>{intent.status}</Badge>
         </div>
-        <h1 className="text-2xl font-semibold mt-2">{s.product_name}</h1>
+        <h1 className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight mt-3">{s.product_name}</h1>
         <p className="text-ink-2">
           {describeAttributes(s.variant_attributes)} · qty {s.quantity} · {money((s.price_cents * s.quantity) / 100, s.currency)} · bought for {r.buyer.display_name}
         </p>
-        <p className="mt-2 text-sm text-ink-3">
-          Receipt <CopyHash value={r.id} chars={32} label="receipt id" />
+        <p className="mt-3 text-sm text-ink-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>
+            Intent receipt <CopyHash value={r.id} chars={32} label="receipt id" />
+          </span>
+          <span aria-hidden>·</span>
+          <span className="font-mono text-[12px]">{r.schema_version}</span>
         </p>
       </header>
 

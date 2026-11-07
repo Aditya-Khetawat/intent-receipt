@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { DisputeDetail } from "@/lib/views";
-import { ACTION_TONE, Badge, CopyHash, FAULT_TONE, SourceBadge, humanize, money, shortDate } from "./ui";
+import { ACTION_TONE, Badge, BusyLabel, CheckIcon, CopyHash, FAULT_TONE, SourceBadge, humanize, money, shortDate } from "./ui";
 
 type ActionType = "PROVIDE_EVIDENCE" | "ACCEPT_CLAIM" | "MAKE_OFFER" | "SEND_MESSAGE";
 
@@ -181,7 +181,10 @@ function EvidenceColumn({ d, analyzing, elapsed, onRetry }: { d: DisputeDetail; 
               {a.output.evidence.map((e) => (
                 <li key={e.id} className="rounded-lg border border-line p-3 text-sm">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge tone="success">✓ Verified</Badge>
+                    <Badge tone="success">
+                      <CheckIcon className="h-3 w-3" />
+                      Verified
+                    </Badge>
                     <Badge tone={e.supports === "BUYER" ? "warning" : e.supports === "SELLER" ? "accent" : "neutral"}>Supports {e.supports.toLowerCase()}</Badge>
                   </div>
                   <p className="mt-1.5">{e.claim}</p>
@@ -301,7 +304,7 @@ function DecisionColumn({ d, analyzing, onDone }: { d: DisputeDetail; analyzing:
       <div className="mt-5 space-y-3">
         <label className="block text-sm">
           <span className="eyebrow">Action</span>
-          <select className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2" value={type} onChange={(e) => setType(e.target.value as ActionType)}>
+          <select className="field mt-1 w-full px-3 py-2" value={type} onChange={(e) => setType(e.target.value as ActionType)}>
             {(Object.keys(ACTION_LABEL) as ActionType[]).map((k) => (
               <option key={k} value={k}>
                 {ACTION_LABEL[k]}
@@ -313,16 +316,16 @@ function DecisionColumn({ d, analyzing, onDone }: { d: DisputeDetail; analyzing:
         {type === "MAKE_OFFER" && (
           <label className="block text-sm">
             <span className="eyebrow">Offer amount ({d.dispute.currency})</span>
-            <input className="mt-1 w-full rounded-lg border border-line px-3 py-2" value={offer} onChange={(e) => setOffer(e.target.value)} inputMode="decimal" />
+            <input className="field mt-1 w-full px-3 py-2 tabular-nums" value={offer} onChange={(e) => setOffer(e.target.value)} inputMode="decimal" />
           </label>
         )}
         <label className="block text-sm">
           <span className="eyebrow">Response to PayPal (editable draft)</span>
-          <textarea className="mt-1 w-full rounded-lg border border-line px-3 py-2 min-h-28 text-sm" value={sellerText} onChange={(e) => setSellerText(e.target.value)} maxLength={2000} />
+          <textarea className="field mt-1 w-full px-3 py-2 min-h-28 text-sm" value={sellerText} onChange={(e) => setSellerText(e.target.value)} maxLength={2000} />
         </label>
         <label className="block text-sm">
           <span className="eyebrow">Message to buyer (editable draft)</span>
-          <textarea className="mt-1 w-full rounded-lg border border-line px-3 py-2 min-h-20 text-sm" value={buyerText} onChange={(e) => setBuyerText(e.target.value)} maxLength={2000} />
+          <textarea className="field mt-1 w-full px-3 py-2 min-h-20 text-sm" value={buyerText} onChange={(e) => setBuyerText(e.target.value)} maxLength={2000} />
         </label>
         {!previewOpen ? (
           <button type="button" className="btn btn-primary w-full" onClick={() => setPreviewOpen(true)} disabled={!sellerText.trim() || d.dispute.status === "SUBMITTED"}>
@@ -336,8 +339,10 @@ function DecisionColumn({ d, analyzing, onDone }: { d: DisputeDetail; analyzing:
             </pre>
             {d.dispute.simulated && <p className="text-xs text-warning mt-2">This dispute is simulated: the request will be recorded but not sent.</p>}
             <div className="flex gap-2 mt-3">
-              <button type="button" className="btn btn-primary flex-1" onClick={approve} disabled={sending}>
-                {sending ? "Sending…" : d.dispute.simulated ? "Approve (simulated send)" : "Approve & send"}
+              <button type="button" className="btn btn-primary flex-1" onClick={approve} disabled={sending} aria-busy={sending}>
+                <BusyLabel busy={sending} busyText="Sending…">
+                  {d.dispute.simulated ? "Approve (simulated send)" : "Approve & send"}
+                </BusyLabel>
               </button>
               <button type="button" className="btn btn-secondary" onClick={() => setPreviewOpen(false)}>
                 Cancel

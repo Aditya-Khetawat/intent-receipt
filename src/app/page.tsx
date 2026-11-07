@@ -9,13 +9,12 @@ export default function Home() {
     <div className="mx-auto max-w-6xl px-4">
       <section className="pt-14 pb-10 grid lg:grid-cols-[1.25fr_1fr] gap-10 items-center">
         <div>
-          <p className="eyebrow mb-3">Accountability for agentic commerce on PayPal</p>
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.08]">
+          <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-semibold tracking-[-0.03em] leading-[1.05]">
             Receipts for what the AI
-            <br />
+            <br className="hidden sm:block" />
             was asked to do.
           </h1>
-          <p className="mt-5 text-lg text-ink-2 max-w-xl">
+          <p className="mt-6 text-lg leading-relaxed text-ink-2 max-w-xl">
             When an AI agent buys something for you, nobody can prove what you asked for, what the agent understood or what you confirmed.
             IntentReceipt records all three, signs them into a tamper-evident ledger linked to the PayPal order, and uses AI to resolve disputes
             with evidence that is checked against the record, fairly for buyer and seller.
@@ -39,8 +38,8 @@ export default function Home() {
         <ReceiptIllustration />
       </section>
 
-      <section aria-labelledby="how" className="py-8">
-        <h2 id="how" className="text-xl font-semibold mb-5">
+      <section aria-labelledby="how" className="pt-10 pb-8">
+        <h2 id="how" className="text-2xl font-semibold tracking-tight mb-5">
           How it works
         </h2>
         <ol className="grid md:grid-cols-3 gap-4">
@@ -62,8 +61,8 @@ export default function Home() {
             },
           ].map((s) => (
             <li key={s.n} className="card p-5">
-              <span className="font-mono text-accent text-sm">0{s.n}</span>
-              <h3 className="font-semibold mt-1">{s.t}</h3>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-soft text-accent text-sm font-semibold tabular-nums">{s.n}</span>
+              <h3 className="font-semibold mt-3">{s.t}</h3>
               <p className="text-sm text-ink-2 mt-2 leading-relaxed">{s.d}</p>
             </li>
           ))}
@@ -119,12 +118,12 @@ function ReceiptIllustration() {
     ["PayPal", "order · capture COMPLETED"],
   ];
   return (
-    <div className="card p-6 rotate-[0.4deg]" aria-hidden="true">
+    <div className="card p-6 rotate-[0.4deg] border-transparent shadow-[0_18px_40px_-20px_rgb(20_24_31/0.28)] dark:border-line dark:shadow-none" aria-hidden="true">
       <div className="flex items-center justify-between">
-        <span className="eyebrow">Intent receipt</span>
+        <span className="text-sm font-semibold">Intent receipt</span>
         <span className="text-[11px] font-semibold uppercase tracking-wide bg-success-soft text-success rounded-md px-1.5 py-0.5">Chain intact</span>
       </div>
-      <dl className="mt-4 divide-y divide-line">
+      <dl className="print-in mt-4 divide-y divide-line">
         {rows.map(([k, v]) => (
           <div key={k} className="py-2.5 grid grid-cols-[110px_1fr] gap-3 text-sm">
             <dt className="text-ink-3">{k}</dt>
