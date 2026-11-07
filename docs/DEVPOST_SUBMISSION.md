@@ -39,7 +39,7 @@ Next.js 16 (App Router) and TypeScript, SQLite, Tailwind. PayPal: Orders v2 crea
 
 ## Accomplishments
 - [AI eval numbers from docs/ARCHITECTURE.md]
-- 38 automated tests, including tamper detection, invariant I1, webhook verification, citation validation and the injection case.
+- 47 automated tests (tamper detection, invariant I1, webhook verification, citation validation, the injection case, session binding) plus a Playwright end-to-end smoke with axe accessibility checks on six pages.
 - Fresh clone runs with zero keys in under 10 minutes (everything simulated is labelled).
 
 ## What we learned / what's next

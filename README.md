@@ -4,7 +4,7 @@
 
 When an AI agent buys something for you, IntentReceipt records exactly what you asked, what the agent understood and what you confirmed, links it to the PayPal order, and uses AI to resolve disputes with verified evidence, fairly for both buyer and seller.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-0E7C7B.svg)](LICENSE) ![PayPal sandbox](https://img.shields.io/badge/PayPal-sandbox-2457A6.svg) ![Tests](https://img.shields.io/badge/tests-38%20passing-1E7F4F.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-0E7C7B.svg)](LICENSE) ![PayPal sandbox](https://img.shields.io/badge/PayPal-sandbox-2457A6.svg) ![Tests](https://img.shields.io/badge/tests-47%20unit%20%2B%208%20e2e-1E7F4F.svg)
 
 - **Live demo:** [add Render URL] → click **Run guided demo** (no account needed)
 - **Video (2:40):** [add YouTube link]
@@ -71,7 +71,7 @@ flowchart LR
   M -- human approve --> D[PayPal Disputes API]
 ```
 
-Invariants (each tested): **I1** no order without a signed confirmation and matching amount/items · **I2** append-only ledger, verified on read · **I3** analyst has no tools, messages are untrusted data · **I4** nothing sent to PayPal without a human click, request stored first · **I5** every AI output stores model, prompt version and input hash · **I6** secrets only from env. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Invariants (each tested): **I1** no order without a signed confirmation and matching amount/items · **I2** append-only ledger, verified on read · **I3** analyst has no tools, messages are untrusted data · **I4** nothing sent to PayPal without a human click, request stored first · **I5** every AI output stores model, prompt version and input hash · **I6** secrets only from env. Purchases are also bound to the buyer's browser session (httpOnly cookie), so nobody else can confirm, order or capture them. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start (under 10 minutes)
 
@@ -110,7 +110,7 @@ To enable the real integrations, fill `.env`:
 
 Sandbox buyer for PayPal checkout (sandbox only): **[add sandbox buyer email / password]**.
 
-Other commands: `npm run check` (typecheck + lint + tests) · `npm test` · `npm run seed` (reset demo data) · `npm run smoke` (live sandbox checks) · `npm run ai-eval` (S1–S4 × 5 against the live model) · `npm run gen-fixtures`.
+Other commands: `npm run check` (typecheck + lint + tests) · `npm test` · `npm run e2e` (Playwright smoke + axe accessibility checks; first run `npx playwright install chromium`) · `npm run seed` (reset demo state; `-- --all` wipes everything) · `npm run smoke` (live sandbox checks) · `npm run ai-eval` (S1–S4 × 5 against the live model) · `npm run gen-fixtures`.
 
 ## Project structure
 

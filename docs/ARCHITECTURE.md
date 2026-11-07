@@ -46,6 +46,7 @@ flowchart TD
 | I4 | Nothing is sent to PayPal without a human click; request stored before sending | `approveAction` requires `human_confirmed: true`, stores preview first | `tests/flow.test.ts` "I4" |
 | I5 | Every AI output stores provider, model, prompt_version, input_sha256, created_at | `analyses` table; intent record `agent` block | `tests/ai-wiring.test.ts` |
 | I6 | Secrets only from env, never sent to client | `src/lib/env.ts`; only `NEXT_PUBLIC_PAYPAL_CLIENT_ID` reaches the browser | code review |
+| — | A purchase can only be confirmed, cancelled, ordered and captured from the browser session that created it (httpOnly `ir_sid` cookie) | `src/lib/session.ts` | `tests/session.test.ts` |
 
 ## Ledger format
 

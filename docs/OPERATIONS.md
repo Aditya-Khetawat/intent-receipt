@@ -6,6 +6,7 @@
 - If credits are not available, switch to `plan: free` and add an external uptime ping every 10 minutes to `/api/health`; document the decision here.
 - Health check: `GET /api/health` returns ledger status and whether PayPal/AI are configured.
 - **Disk is ephemeral.** The SQLite database is re-created and re-seeded (deterministically) on every deploy/restart. Orders made by judges may disappear after a restart; that is acceptable and expected. The signing key is in env, so receipts stay verifiable across restarts of the seeded history.
+- **Reset demo data** (public button on `/demo`) only removes simulated disputes, unconfirmed drafts and chats. Signed ledger entries, orders and real sandbox disputes are never deleted. A full wipe is CLI-only: `npm run seed -- --all`.
 - **Do not redeploy between Dec 1 and Dec 15** except for rules-compliant fixes.
 
 ## Secrets (Render dashboard, never in git)

@@ -13,7 +13,7 @@ No account needed. Everything simulated or cached is labelled on screen.
 
 | Criterion | Look at |
 |---|---|
-| Technological implementation | `src/lib/paypal/orders.ts` (Orders v2 + guard I1), `src/lib/paypal/webhooks.ts` (signature verification), `src/lib/paypal/toolkit.ts` (Agent Toolkit), `src/lib/ledger/` (signed hash chain), `src/lib/ai/validator.ts` + `src/lib/disputes/analyze.ts` (verified citations), `tests/` (38 tests) |
+| Technological implementation | `src/lib/paypal/orders.ts` (Orders v2 + guard I1), `src/lib/paypal/webhooks.ts` (signature verification), `src/lib/paypal/toolkit.ts` (Agent Toolkit), `src/lib/ledger/` (signed hash chain), `src/lib/ai/validator.ts` + `src/lib/disputes/analyze.ts` (verified citations), `tests/` (47 unit/integration tests) and `e2e/` (Playwright + axe) |
 | Design | `src/app/*` pages, `src/components/*`, tokens in `src/app/globals.css` |
 | Potential impact | Scenarios in `src/lib/disputes/scenarios.ts`; merchant metrics in `src/lib/views.ts` |
 | Innovation | Confirmation-text hashing (`src/lib/intents`), balanced analyst prompt (`prompts/dispute-analyst.md`), in-browser verify (`src/components/VerifyPanel.tsx`) |
