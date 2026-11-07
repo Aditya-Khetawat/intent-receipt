@@ -42,6 +42,8 @@ Verified by loading the package locally and dumping tool schemas (2026-11-07):
 | Headers used: `paypal-auth-algo`, `paypal-cert-url`, `paypal-transmission-id`, `paypal-transmission-sig`, `paypal-transmission-time` | PayPal docs + code | 2026-11-07 |
 | `POST /v1/notifications/simulate-event` exists. Simulated events are not signed for a real webhook id, so they cannot pass verification; our simulated disputes bypass the HTTP endpoint and enter at the same `processWebhookEvent` function | Webhooks docs page | 2026-11-07 |
 | Events handled: `PAYMENT.CAPTURE.COMPLETED`, `CUSTOMER.DISPUTE.CREATED`, `CUSTOMER.DISPUTE.UPDATED`, `CUSTOMER.DISPUTE.RESOLVED`; deduped on event `id` | code + tests | 2026-11-07 |
+| Hosted webhook registered via `POST /v1/notifications/webhooks` for `https://intentreceipt.onrender.com/api/webhooks/paypal` with the four events above (the ID lives in Render's `PAYPAL_WEBHOOK_ID`) | live sandbox | 2026-11-07 |
+| Real signed delivery to the hosted endpoint | **PENDING** (approve and capture a sandbox order, then check `webhook_events`) | |
 
 ## Disputes v1
 
