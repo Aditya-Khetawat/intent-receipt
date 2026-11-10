@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-11-07_
+_Last updated: 2026-11-10_
 
 ## Done
 - **M0 bootstrap:** rules re-checked (`docs/RULES_CHECK.md`); Next.js 16 + TypeScript strict + Tailwind 4; MIT license; `.env.example`; `doctor`, `gen-keys`, `seed`, `smoke`, `gen-fixtures`, `ai-eval` scripts; `render.yaml`; `/api/health`. Public repo: github.com/Aditya-Khetawat/intent-receipt.
@@ -10,8 +10,9 @@ _Last updated: 2026-11-07_
 - **M2 buyer flow and receipts:** signed hash-chained ledger with tamper tests; deterministic constraint checker; shopping agent; hashed confirmation card; guard I1; Orders create/capture; receipt page with in-browser Verify (other receipts shared as redacted headers only); receipt JSON download.
 - **M3 disputes and analyst:** verified webhook endpoint with dedupe; one ingest path for real and simulated disputes; analyst with schema retry, citation validator, corrective re-run, CACHED fallback, ERROR + Retry.
 - **M4 console and demo:** AG Grid queue; dispute detail with verified evidence, balanced views, editable drafts, exact request preview, human approve; `/demo`; S1–S4 seeds; metrics; budget caps.
+- **Evidence pack (2026-11-10):** every receipt exports as a PDF with the signed receipt JSON embedded; contesting attaches it to PayPal `provide-evidence` as `PROOF_OF_RECEIPT_COPY` (stored by SHA-256 before sending); `/verify` checks a pack in the browser against the published key. Real sandbox send is pending a buyer-opened sandbox dispute.
 - **Hardening:** purchases bound to the buyer's browser session; rate limits keyed on a non-forgeable client IP plus a global cap; public reset limited to demo state; AA contrast fixes.
-- **Quality:** `npm run check` green (47 tests), `npm run build` green, `npm run e2e` green (guided-demo smoke, in-browser Verify, axe with no serious/critical violations on 6 pages).
+- **Quality:** `npm run check` green (70 tests), `npm run build` green, `npm run e2e` green (guided-demo smoke, in-browser Verify, evidence pack verify and tamper, axe with no serious/critical violations on 7 pages).
 
 ## Next (needs owner input; see "Blocked")
 1. Keys → `npm run doctor`, `npm run smoke`, a real sandbox checkout in `/shop`.

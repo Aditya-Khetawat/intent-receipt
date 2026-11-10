@@ -34,6 +34,7 @@ flowchart TD
 | `src/lib/ai/agent.ts` | Shopping agent turn: tools `search_catalog`, `get_product`, `propose_selection`, `check_order_status` (toolkit). |
 | `src/lib/ai/validator.ts` | JSON Pointer resolution, value comparison, instruction-like text detection. |
 | `src/lib/disputes/` | Ingest (webhook + simulated share one path), context builder, analyst pipeline with fallback, actions with stored previews. |
+| `src/lib/evidence/` | Evidence pack: bundle builder (server), PDF renderer with the JSON embedded, PDF reader, and the verifier shared by the receipt page, `/verify` and the tests (Web Crypto only). |
 | `prompts/*.md` | Versioned prompts (`shop-agent@1`, `dispute-analyst@4`). |
 
 ## Invariants and where they are enforced
@@ -53,6 +54,32 @@ flowchart TD
 `body_sha256 = SHA-256(canonical_json({intent_id, payload}))` and `hash = SHA-256(canonical_json({seq, type, prev_hash, body_sha256}))`, genesis `prev_hash` = 64 zeros. Splitting out the body digest lets the receipt page verify the whole chain while every other receipt is shared as headers only (no intent id, no payload): see `chainForIntent()`. Canonical JSON = keys sorted recursively, no whitespace, `JSON.stringify` escaping, finite numbers only (matches RFC 8785 for the values we store). Signature = Ed25519 over the 32 hash bytes. Public key at `/.well-known/intent-receipt-key.json` (JWK + SPKI).
 
 "Tamper-evident", not "tamper-proof": someone with database write access can change rows, but the change is detected by Verify (first bad `seq` reported) unless they also hold the signing key.
+
+## Evidence pack
+
+One file per receipt that a PayPal dispute reviewer, or anyone else, can check without trusting our server.
+
+- **Contents** (`intentreceipt-evidence/0.1`, `src/lib/evidence/types.ts`):
+  - the intent record exactly as signed in INTENT_CONFIRMED;
+  - the PayPal order binding;
+  - the chain from entry #1 to this receipt's last entry (other receipts' entries as headers only);
+  - the public key;
+  - delivery events, labelled unsigned.
+
+  There is no AI output and there are no dispute messages: the pack carries facts only.
+- **Format.** PayPal evidence accepts only `.jpg/.jpeg/.gif/.png/.pdf` (under 10 MB per file, 50 MB per call), so the pack is a PDF (pdf-lib, standard fonts) with the JSON embedded as `intent-receipt-evidence.json`. When a character can't be drawn in the standard fonts, the PDF says so; the embedded JSON always keeps the exact text that was hashed.
+- **PayPal.** Contesting sends `provide-evidence` with `evidence_type: PROOF_OF_RECEIPT_COPY`, `documents: [{ name }]` and the PDF as the `evidence-file` part. The PDF is stored by SHA-256 in `evidence_files` before the request is sent (I4), and the action log links the exact file. A dispute whose order has no signed receipt sends notes only.
+- **Verification** (`verifyEvidenceBundle`), at `/verify` (in the browser; nothing is uploaded) and in tests:
+  - the format;
+  - every hash and chain link from #1;
+  - every Ed25519 signature, against the **published** key, not the key named in the file;
+  - that the key in the file is the published key;
+  - that the readable record equals the signed one;
+  - that the card text matches its SHA-256;
+  - that the order's `custom_id` equals `intent_id:` plus the first 16 hex characters of the confirmation entry's hash.
+
+  "Verified" needs all of these. If the published key can't be fetched, or the browser lacks Ed25519, the result is "Partly verified".
+- **Known limit.** Entry headers don't commit to their intent id (the ledger format predates the pack). A pack builder could therefore present one of this receipt's own later entries as another receipt's redacted header. The required entries (confirmation, order, capture) can't be hidden without failing the record or order check. Fixing this properly means a ledger format change.
 
 ## Dispute analyst reliability design
 

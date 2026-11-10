@@ -21,6 +21,7 @@ AI agents are starting to shop for people. When an agent-made purchase goes wron
 1. **Intent Receipt.** Before payment, the shopping agent's request, extracted constraints, selection and rationale, a **deterministic constraint check** and the buyer's confirmation (including a SHA-256 of the exact card text they saw) are **signed with Ed25519 and hash-chained**, then linked to the PayPal order and capture. Anyone can verify it in the browser.
 2. **AI Dispute Analyst.** When a PayPal dispute arrives, an LLM reads the receipt, order, shipping events and messages, classifies the dispute and recommends what the seller should do. **Every citation is a JSON Pointer that code checks against the source data**; unverified citations are dropped and counted. It is deliberately balanced: it recommends a refund when the agent was at fault.
 3. **Merchant Console.** An AG Grid queue and a detail view with verified evidence, buyer and seller views side by side, editable drafts and the exact PayPal API request. **A human approves every action.**
+4. **Evidence pack.** Every receipt exports as one PDF with the signed receipt embedded inside. Contesting a dispute attaches it to PayPal's `provide-evidence` as a receipt copy, and anyone can drop the file on `/verify` to check every hash and signature in their browser, against the published key.
 
 ## How PayPal is used
 
@@ -30,7 +31,7 @@ AI agents are starting to shop for people. When an agent-made purchase goes wron
 | **Orders v2** create + capture | `src/lib/paypal/orders.ts` | Order created only after a signed confirmation, for exactly the confirmed amount and item (invariant I1). `custom_id = <intent_id>:<hash16>`. Idempotent via `PayPal-Request-Id`. |
 | **PayPal JS SDK buttons** (`@paypal/react-paypal-js`) | `src/components/ShopClient.tsx` | Buyer approval in the sandbox popup |
 | **Webhooks** + `verify-webhook-signature` | `src/app/api/webhooks/paypal/route.ts`, `src/lib/paypal/webhooks.ts` | Dispute events, signature verified, deduped by event id |
-| **Disputes v1** | `src/lib/disputes/actions.ts` | `accept-claim`, `make-offer`, `send-message`, `provide-evidence` after human approval |
+| **Disputes v1** | `src/lib/disputes/actions.ts` | `accept-claim`, `make-offer`, `send-message`, `provide-evidence` after human approval; `provide-evidence` attaches the evidence pack PDF (`PROOF_OF_RECEIPT_COPY`) |
 | **PayPal Agent Toolkit** (`@paypal/agent-toolkit`) | `src/lib/paypal/toolkit.ts`, `src/lib/ai/agent.ts`, `src/lib/disputes/ingest.ts` | `get_order` as a shopping-agent tool; `get_dispute` to fetch full disputes on real webhooks |
 
 ## How AI is used (the product's runtime AI)
@@ -115,7 +116,7 @@ Other commands: `npm run check` (typecheck + lint + tests) · `npm test` · `npm
 ## Project structure
 
 ```
-src/app/            pages (/, /shop, /orders, /receipt/[id], /merchant, /merchant/disputes/[id], /demo) and /api routes
+src/app/            pages (/, /shop, /orders, /receipt/[id], /verify, /merchant, /merchant/disputes/[id], /demo) and /api routes
 src/lib/ledger/     canonical JSON, hash chain, Ed25519, verify
 src/lib/catalog/    fictional catalog, deterministic constraint checker
 src/lib/intents/    intent records and confirmation card
