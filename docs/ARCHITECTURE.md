@@ -34,7 +34,7 @@ flowchart TD
 | `src/lib/ai/agent.ts` | Shopping agent turn: tools `search_catalog`, `get_product`, `propose_selection`, `check_order_status` (toolkit). |
 | `src/lib/ai/validator.ts` | JSON Pointer resolution, value comparison, instruction-like text detection. |
 | `src/lib/disputes/` | Ingest (webhook + simulated share one path), context builder, analyst pipeline with fallback, actions with stored previews. |
-| `prompts/*.md` | Versioned prompts (`shop-agent@1`, `dispute-analyst@3`). |
+| `prompts/*.md` | Versioned prompts (`shop-agent@1`, `dispute-analyst@4`). |
 
 ## Invariants and where they are enforced
 
@@ -80,5 +80,7 @@ Notes:
 - 3 of 20 runs did not return and count as misses in every hit column: two were rate-limited by Groq (8K tokens/minute on the free tier; S1 run 3, S4 run 5) and one produced output that failed the schema on both attempts (S2 run 1).
 - All 17 runs that returned chose the expected action, with a classification and action that agree. On `dispute-analyst@2` the same eval had two that contradicted themselves: S3 chose CONTEST while classifying ITEM_NOT_RECEIVED, and S4 chose OFFER_PARTIAL for BUYER_CHANGED_MIND. The cause was that the model picked the action as a separate field, against rules written in terms of fault rather than classification, so a clean intent record read as grounds to contest a parcel that never arrived, and nothing in code checked the pair. `@3` states the classification-to-action table and code enforces it (see the reliability design above).
 - Raw citation pass rate is 100% everywhere. On 2026-11-07, with `dispute-analyst@1`, S1 was 71%: the model wrote pointers like `/selection/variant_attributes/color` without the `/intent` prefix. `@2` added the valid top-level keys, and the validator names the prefixed pointer in its failure reason, which feeds the corrective re-run. Code still verifies every value; a hint never makes a citation pass.
+
+`@4` (2026-11-10) adds one rule on top of `@3`: for BUYER_CHANGED_MIND inside the return window, the buyer draft offers a normal return and the seller draft says so. The decision policy is unchanged. Not yet evaluated: the day's Groq token budget ran out first. Run `npm run ai-eval 3 S1,S4` to check it.
 
 Targets from the brief: expected action in at least 80% of runs; 100% of shown evidence verified (guaranteed by construction); injection ignored 5/5 (S4 expected CONTEST).
