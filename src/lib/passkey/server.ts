@@ -120,11 +120,13 @@ export async function verifyRegistration(sessionId: string, response: Registrati
   if (!v.verified) throw new PasskeyError("Passkey registration could not be verified.");
   const { credential } = v.registrationInfo;
   const { jwk, alg } = coseToJwk(credential.publicKey);
-  getDb()
+  // Credential ids come from the client: never let a registration take over an existing one.
+  const inserted = getDb()
     .prepare(
-      "INSERT OR REPLACE INTO passkey_credentials (id, session_id, public_key_cose, public_key_jwk, alg, counter, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT OR IGNORE INTO passkey_credentials (id, session_id, public_key_cose, public_key_jwk, alg, counter, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .run(credential.id, sessionId, toB64u(credential.publicKey), JSON.stringify(jwk), alg, credential.counter, nowIso());
+  if (inserted.changes === 0) throw new PasskeyError("This passkey is already registered.");
   return { credential_id: credential.id };
 }
 
