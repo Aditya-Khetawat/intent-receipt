@@ -455,7 +455,13 @@ function DecisionPanel({ d, analyzing, onDone }: { d: DisputeDetail; analyzing: 
           ? { note: sellerText, accept_claim_type: "REFUND" }
           : type === "MAKE_OFFER"
             ? { note: sellerText, offer_type: "REFUND", offer_amount: { currency_code: d.dispute.currency, value: offer } }
-            : { evidences: [{ evidence_type: "PROOF_OF_FULFILLMENT", notes: sellerText }] },
+            : {
+                evidences: [
+                  d.evidence
+                    ? { evidence_type: "PROOF_OF_RECEIPT_COPY", documents: [{ name: d.evidence.file_name }], notes: sellerText }
+                    : { evidence_type: "PROOF_OF_RECEIPT_COPY", notes: sellerText },
+                ],
+              },
   };
 
   async function approve() {
@@ -577,6 +583,20 @@ function DecisionPanel({ d, analyzing, onDone }: { d: DisputeDetail; analyzing: 
                 <pre className="mt-2 text-[11px] font-mono whitespace-pre-wrap break-all max-h-56 overflow-auto">
                   {`${preview.method} ${preview.path}\n${JSON.stringify(preview.body, null, 2)}`}
                 </pre>
+                {type === "PROVIDE_EVIDENCE" && d.evidence && (
+                  <p className="text-xs text-ink-2 mt-2">
+                    Attaches{" "}
+                    <a
+                      href={`/api/evidence/${d.evidence.intent_id}?inline=1`}
+                      target="_blank"
+                      rel="noopener"
+                      className="font-mono underline decoration-line-strong hover:text-ink break-all"
+                    >
+                      {d.evidence.file_name}
+                    </a>{" "}
+                    as the evidence-file part: the receipt as a PDF, with the signed JSON inside.
+                  </p>
+                )}
                 {d.dispute.simulated && (
                   <p className="text-xs text-warning mt-2">This dispute is simulated: the request will be recorded but not sent.</p>
                 )}
@@ -624,6 +644,20 @@ function DecisionPanel({ d, analyzing, onDone }: { d: DisputeDetail; analyzing: 
                   <div className="text-xs font-mono text-ink-3 mt-1 break-all">
                     {x.request_preview.method} {x.request_preview.path}
                   </div>
+                  {x.request_preview.attachments?.map((f) => (
+                    <div key={f.sha256} className="text-xs text-ink-3 mt-1 flex flex-wrap items-center gap-x-2">
+                      <span>Attached</span>
+                      <a
+                        href={`/api/evidence/files/${f.sha256}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="font-mono underline decoration-line-strong hover:text-ink break-all"
+                      >
+                        {f.name}
+                      </a>
+                      <CopyHash value={f.sha256} chars={10} label="attachment hash" />
+                    </div>
+                  ))}
                 </motion.li>
               ))}
             </AnimatePresence>

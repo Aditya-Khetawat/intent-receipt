@@ -4,6 +4,10 @@ import { getDb, nowIso } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getAccessToken, PAYPAL_BASE, paypalFetch } from "@/lib/paypal/client";
 import { getDispute, setDisputeStatus } from "./store";
+import { getOrder } from "@/lib/paypal/orders";
+import { buildEvidenceBundle } from "@/lib/evidence/bundle";
+import { evidenceFileName, renderEvidencePdf } from "@/lib/evidence/pdf";
+import { getEvidenceFile, storeEvidencePdf } from "@/lib/evidence/store";
 
 // Merchant actions (§9.6). Invariant I4: nothing is sent to PayPal without an
 // explicit human click; every request is stored as a preview BEFORE it is sent.
@@ -35,7 +39,29 @@ export function actionForRecommendation(rec: string): ActionType {
   }
 }
 
-export function buildActionRequest(paypalDisputeId: string, input: Omit<ApproveInput, "approved_by" | "human_confirmed">, currency: string) {
+/** A file sent as its own multipart part; the bytes live in evidence_files under sha256. */
+export interface ActionAttachment {
+  part: "evidence-file";
+  name: string;
+  content_type: "application/pdf";
+  bytes: number;
+  sha256: string;
+}
+
+export interface ActionRequest {
+  method: string;
+  path: string;
+  contentType?: string;
+  body: unknown;
+  attachments?: ActionAttachment[];
+}
+
+export function buildActionRequest(
+  paypalDisputeId: string,
+  input: Omit<ApproveInput, "approved_by" | "human_confirmed">,
+  currency: string,
+  attachment?: { name: string; bytes: number; sha256: string },
+): ActionRequest {
   const base = `/v1/customer/disputes/${encodeURIComponent(paypalDisputeId)}`;
   switch (input.type) {
     case "SEND_MESSAGE":
@@ -48,21 +74,38 @@ export function buildActionRequest(paypalDisputeId: string, input: Omit<ApproveI
         path: `${base}/make-offer`,
         body: { note: input.seller_text, offer_type: "REFUND", offer_amount: { currency_code: currency, value: input.offer_amount ?? "0.00" } },
       };
-    case "PROVIDE_EVIDENCE":
+    case "PROVIDE_EVIDENCE": {
+      // PROOF_OF_FULFILLMENT expects carrier tracking; documents and notes go with the other types.
+      const notes = input.seller_text.slice(0, 2000);
+      if (!attachment) {
+        return {
+          method: "POST",
+          path: `${base}/provide-evidence`,
+          contentType: "multipart/form-data (part 'input' = JSON)",
+          body: { evidences: [{ evidence_type: "PROOF_OF_RECEIPT_COPY", notes }] },
+        };
+      }
       return {
         method: "POST",
         path: `${base}/provide-evidence`,
-        contentType: "multipart/form-data (part 'input' = JSON)",
-        body: { evidences: [{ evidence_type: "PROOF_OF_FULFILLMENT", notes: input.seller_text.slice(0, 2000) }] },
+        contentType: "multipart/form-data (part 'input' = JSON, part 'evidence-file' = PDF)",
+        body: { evidences: [{ evidence_type: "PROOF_OF_RECEIPT_COPY", documents: [{ name: attachment.name }], notes }] },
+        attachments: [{ part: "evidence-file", content_type: "application/pdf", ...attachment }],
       };
+    }
   }
 }
 
-async function sendReal(req: ReturnType<typeof buildActionRequest>): Promise<unknown> {
+async function sendReal(req: ActionRequest): Promise<unknown> {
   if (req.path.endsWith("/provide-evidence")) {
     const token = await getAccessToken();
     const form = new FormData();
     form.append("input", new Blob([JSON.stringify(req.body)], { type: "application/json" }));
+    for (const a of req.attachments ?? []) {
+      const file = getEvidenceFile(a.sha256);
+      if (!file) throw new Error(`Evidence file ${a.sha256} is missing`);
+      form.append(a.part, new Blob([new Uint8Array(file.pdf)], { type: a.content_type }), a.name);
+    }
     const res = await fetch(`${PAYPAL_BASE}${req.path}`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
     const text = await res.text();
     const body = text ? JSON.parse(text) : {};
@@ -72,10 +115,24 @@ async function sendReal(req: ReturnType<typeof buildActionRequest>): Promise<unk
   return paypalFetch(req.path, { method: req.method, body: req.body, requestId: `ir-act-${ulid()}` });
 }
 
+/** Renders and stores the pack for the disputed order's receipt; undefined when there is no signed receipt. */
+async function evidenceFor(orderId: string | null) {
+  const intentId = orderId ? getOrder(orderId)?.intent_id : null;
+  const bundle = intentId ? buildEvidenceBundle(intentId) : null;
+  if (!intentId || !bundle) return undefined;
+  const name = evidenceFileName(intentId);
+  return { name, ...storeEvidencePdf(intentId, name, await renderEvidencePdf(bundle)) };
+}
+
 export async function approveAction(disputeId: string, input: ApproveInput) {
   const d = getDispute(disputeId);
   if (!d) throw new Error("dispute not found");
-  const req = buildActionRequest(d.paypal_dispute_id, input, d.currency);
+  const req = buildActionRequest(
+    d.paypal_dispute_id,
+    input,
+    d.currency,
+    input.type === "PROVIDE_EVIDENCE" ? await evidenceFor(d.order_id) : undefined,
+  );
   const simulated = d.simulated || !env.paypalConfigured;
   const id = `act_${ulid()}`;
   const db = getDb();

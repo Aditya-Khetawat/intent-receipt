@@ -166,6 +166,32 @@ export default async function ReceiptPage({ params }: PageProps<"/receipt/[inten
 
       <VerifyPanel intentId={intent.id} serverOk={chain.ok} count={chain.count} keyId={chain.key_id} />
 
+      {r.confirmation && (
+        <section className="card p-5 flex flex-wrap items-center justify-between gap-4" aria-labelledby="pack-heading">
+          <div className="max-w-[60ch]">
+            <h2 id="pack-heading" className="font-semibold">
+              Evidence pack
+            </h2>
+            <p className="text-sm text-ink-3">
+              This receipt as one PDF, ready to attach to a PayPal dispute. The signed receipt travels inside the file, so anyone can check
+              it at{" "}
+              <Link href="/verify" className="underline decoration-line-strong hover:text-ink">
+                /verify
+              </Link>{" "}
+              without trusting this server.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a className="btn btn-secondary" href={`/api/evidence/${intent.id}`} download>
+              Download PDF
+            </a>
+            <a className="btn btn-ghost" href={`/api/evidence/${intent.id}?format=json`} download>
+              JSON
+            </a>
+          </div>
+        </section>
+      )}
+
       <details className="card group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
           <span>
@@ -206,9 +232,6 @@ export default async function ReceiptPage({ params }: PageProps<"/receipt/[inten
             ))}
           </ol>
           <div className="mt-4 flex flex-wrap gap-2">
-            <a className="btn btn-secondary" href={`/api/ledger/${intent.id}`} download={`intent-receipt-${intent.id}.json`}>
-              Download receipt JSON
-            </a>
             <a className="btn btn-ghost" href="/.well-known/intent-receipt-key.json">
               Public signing key
             </a>

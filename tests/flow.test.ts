@@ -15,6 +15,11 @@ import { SCENARIOS } from "@/lib/disputes/scenarios";
 import type { Analysis } from "@/lib/ai/schemas";
 import { resetDemoData } from "@/lib/seed";
 import type { Constraint } from "@/lib/catalog/constraints";
+import { evidenceFileName } from "@/lib/evidence/pdf";
+import { extractBundleFromPdf } from "@/lib/evidence/extract";
+import { getEvidenceFile } from "@/lib/evidence/store";
+import { verifyEvidenceBundle } from "@/lib/evidence/verify";
+import { publicKeyDocument } from "@/lib/ledger/keys";
 
 const draft = (constraints: Constraint[] = [{ key: "max_price", value: 85, source_turn: 0, confidence: 1 }]) =>
   createDraftIntent({
@@ -268,6 +273,44 @@ describe("dispute pipeline", () => {
       { type: "SEND_MESSAGE", simulated: 1 },
     ]);
     expect(getDispute(id)!.status).toBe("SUBMITTED");
+  });
+
+  it("contesting attaches the evidence pack, stored before sending, as PROOF_OF_RECEIPT_COPY", async () => {
+    const id = (await simulateScenarioDispute("S1"))!;
+    const r = await approveAction(id, {
+      type: "PROVIDE_EVIDENCE",
+      seller_text: "The buyer confirmed 40 L.",
+      approved_by: "merchant-demo",
+      human_confirmed: true,
+    });
+    const ev = (r.request.body as { evidences: { evidence_type: string; documents?: { name: string }[]; notes: string }[] }).evidences[0];
+    expect(ev.evidence_type).toBe("PROOF_OF_RECEIPT_COPY");
+    expect(ev.documents).toEqual([{ name: evidenceFileName("ir_seed_s1_ridge40") }]);
+    const att = r.request.attachments![0];
+    expect(att).toMatchObject({ part: "evidence-file", name: evidenceFileName("ir_seed_s1_ridge40"), content_type: "application/pdf" });
+    const stored = getEvidenceFile(att.sha256)!;
+    expect(stored.pdf.byteLength).toBe(att.bytes);
+    const v = await verifyEvidenceBundle(await extractBundleFromPdf(new Uint8Array(stored.pdf)), { trustedKey: publicKeyDocument() });
+    expect(v.verdict).toBe("verified");
+    const preview = JSON.parse(
+      (getDb().prepare("SELECT request_preview_json FROM actions WHERE id = ?").get(r.id) as { request_preview_json: string })
+        .request_preview_json,
+    );
+    expect(preview.attachments[0].sha256).toBe(att.sha256);
+  });
+
+  it("sends notes only when the disputed order has no signed receipt", async () => {
+    const id = (await simulateScenarioDispute("S1"))!;
+    getDb().prepare("UPDATE disputes SET order_id = NULL WHERE id = ?").run(id);
+    const r = await approveAction(id, {
+      type: "PROVIDE_EVIDENCE",
+      seller_text: "Shipped as ordered.",
+      approved_by: "merchant-demo",
+      human_confirmed: true,
+    });
+    const ev = (r.request.body as { evidences: Record<string, unknown>[] }).evidences[0];
+    expect(ev).toEqual({ evidence_type: "PROOF_OF_RECEIPT_COPY", notes: "Shipped as ordered." });
+    expect(r.request.attachments).toBeUndefined();
   });
 
   it("re-delivered dispute events do not duplicate messages", async () => {

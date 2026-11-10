@@ -55,7 +55,7 @@ export interface ActionRow {
   id: string;
   dispute_id: string;
   type: string;
-  request_preview: { method: string; path: string; body: unknown };
+  request_preview: { method: string; path: string; body: unknown; attachments?: { name: string; bytes: number; sha256: string }[] };
   response: unknown;
   simulated: boolean;
   approved_by: string;

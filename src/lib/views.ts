@@ -13,6 +13,7 @@ import { getIntent, confirmationCard } from "@/lib/intents";
 import { getOrder, getOrderByIntent } from "@/lib/paypal/orders";
 import { entriesForIntent, verifyLedger } from "@/lib/ledger";
 import { publicKeyDocument } from "@/lib/ledger/keys";
+import { evidenceFileName } from "@/lib/evidence/pdf";
 
 export function appStatus() {
   const ai = aiStatus();
@@ -127,6 +128,8 @@ export function disputeDetail(id: string) {
           .join("\n"),
     },
     ledgerOk: verifyLedger().ok,
+    // Contesting attaches this receipt's evidence pack; null when the order has no signed confirmation.
+    evidence: intent?.record.confirmation ? { intent_id: intent.id, file_name: evidenceFileName(intent.id) } : null,
     timeline,
     analysis: a && {
       id: a.id,
