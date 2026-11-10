@@ -15,20 +15,17 @@ _Last updated: 2026-11-10_
 - **Hardening:** purchases bound to the buyer's browser session; rate limits keyed on a non-forgeable client IP plus a global cap; public reset limited to demo state; AA contrast fixes.
 - **Quality:** `npm run check` green (81 tests), `npm run build` green, `npm run e2e` green (guided-demo smoke, in-browser Verify, evidence pack verify and tamper, passkey confirm with a virtual authenticator, axe with no serious/critical violations on 7 pages).
 
-## Next (needs owner input; see "Blocked")
-1. Keys → `npm run doctor`, `npm run smoke`, a real sandbox checkout in `/shop`.
-2. `npm run gen-fixtures` (replace hand-authored CACHED fallbacks with real model output) and `npm run ai-eval` (paste table into `docs/ARCHITECTURE.md`).
-3. Deploy to Render; register the webhook; run the 5-minute path on the hosted URL; set `TRUSTED_CLIENT_IP_HEADER` if Render provides a reliable one.
-4. Optional: a real sandbox dispute (Mode B) for the video.
-5. Fill README/Devpost placeholders (URLs, sandbox buyer login, eval numbers); record and upload the video; submit.
+## Next (owner, before Thu 2026-11-12 12:00 pm PT)
+1. Confirm one purchase with a real passkey on the live `/shop` and press Verify on its receipt.
+2. Record the video (`docs/VIDEO_SCRIPT.md`) and add the YouTube link to the README and `docs/DEVPOST_SUBMISSION.md`.
+3. Submit on Devpost (tick AG Grid and Render); set the GitHub About description, website and topics; claim the Render credit.
+4. After submitting, push nothing: a push redeploys Render and resets the demo data.
 
-## Blocked / needs owner
-- PayPal sandbox Client ID + Secret, sandbox buyer login, webhook ID (after deploy).
-
-- Render account + hackathon credits.
+Optional, not needed for submission: re-run `npm run ai-eval 3 S1,S4` for `dispute-analyst@4` (spends the shared Groq budget); a real sandbox dispute to exercise `provide-evidence` with the PDF.
 
 ## Honest gaps
-- Groq free tier is 8K tokens/minute: concurrent visitors queue, and a busy minute falls back to CACHED analyses.
+- Groq free tier is 8K tokens/minute and 200K tokens/day for gpt-oss-120b: concurrent visitors queue, a busy minute falls back to CACHED analyses, and once the daily budget is spent the shop offers the labelled example proposal.
+- A passkey proves the holder approved the exact card, not who the holder is (no accounts).
 - AI eval (2026-11-10, prompt dispute-analyst@3): 5 runs per scenario, all 17 returned runs chose the expected action with a self-consistent classification (on @2, 2 of 14 contradicted themselves); 2 runs were rate-limited by Groq and 1 failed the schema. Raw citation pass rate 100% (S1 was 71% on @1). Classification/action pairs are now checked in code against a decision policy.
 - Agent replies are not streamed token-by-token.
 - No login: merchant console and `/demo` are open by design for judges (sandbox + fictional data only).
