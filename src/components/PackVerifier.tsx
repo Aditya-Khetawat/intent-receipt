@@ -180,6 +180,12 @@ function Result({ name, r }: { name: string; r: BundleVerification }) {
                 {b.intent_record.confirmation?.presented_text ?? "No confirmation"}
               </pre>
             </dd>
+            <dt className="text-ink-3">Confirmed with</dt>
+            <dd>
+              {b.intent_record.confirmation?.method === "passkey"
+                ? "The buyer's passkey (signature checked above)"
+                : "A button press, without a passkey"}
+            </dd>
             {b.order && (
               <>
                 <dt className="text-ink-3">PayPal order</dt>

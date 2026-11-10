@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { PayPalButtons, PayPalScriptProvider, usePayPalScriptReducer } from "@paypal/react-paypal-js";
+import { browserSupportsWebAuthn, startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import type { CardLine, IntentRecord } from "@/lib/intents";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertIcon, ArrowIcon, Badge, CheckIcon, Spinner, money } from "./ui";
@@ -36,6 +37,8 @@ const SUGGESTIONS = [
   "A 20L waterproof dry bag in blue, under $30 please.",
 ];
 
+const noSubscribe = () => () => {};
+
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
@@ -66,6 +69,10 @@ export function ShopClient({
   const [phase, setPhase] = useState<Phase>("chatting");
   const [error, setError] = useState<string | null>(null);
   const [aiDown, setAiDown] = useState(!aiAvailable);
+  // Passkeys need WebAuthn, known only in the browser; the plain button stays available either way.
+  const canPasskey = useSyncExternalStore(noSubscribe, browserSupportsWebAuthn, () => false);
+  const [passkeyStep, setPasskeyStep] = useState<"creating" | "signing" | null>(null);
+  const [signedWithPasskey, setSignedWithPasskey] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -94,17 +101,55 @@ export function ShopClient({
     }
   }
 
-  async function confirm() {
+  async function loadExample() {
+    setError(null);
+    setBusy(true);
+    try {
+      const r = await postJson<{ reply: string; request: string; intent: Proposal }>("/api/agent/example", {});
+      setMessages((m) => [...m, { role: "user", text: r.request }, { role: "agent", text: r.reply }]);
+      setProposal(r.intent);
+      setPhase("proposed");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Signs with a passkey: creates one for this browser first if needed, then signs this card's hash. */
+  async function passkeyAssertion(intentId: string) {
+    type Opts = { registered: boolean; options?: Parameters<typeof startAuthentication>[0]["optionsJSON"] };
+    let opts = await postJson<Opts>(`/api/intents/${intentId}/passkey`, {});
+    if (!opts.registered) {
+      setPasskeyStep("creating");
+      const reg = await startRegistration({ optionsJSON: await postJson("/api/passkey/register", { step: "options" }) });
+      await postJson("/api/passkey/register", { step: "verify", response: reg });
+      opts = await postJson<Opts>(`/api/intents/${intentId}/passkey`, {});
+    }
+    setPasskeyStep("signing");
+    return startAuthentication({ optionsJSON: opts.options! });
+  }
+
+  async function confirm(withPasskey: boolean) {
     if (!proposal) return;
     setPhase("confirming");
     setError(null);
     try {
       // The exact text rendered on the card is what gets hashed and signed.
       const presented = proposal.card.map((l) => l.text).join("\n");
-      await postJson(`/api/intents/${proposal.id}/confirm`, { presented_text: presented, client_nonce: crypto.randomUUID() });
+      const passkey = withPasskey ? await passkeyAssertion(proposal.id) : undefined;
+      setPasskeyStep(null);
+      await postJson(`/api/intents/${proposal.id}/confirm`, { presented_text: presented, client_nonce: crypto.randomUUID(), passkey });
+      setSignedWithPasskey(withPasskey);
       setPhase("pay");
     } catch (e) {
-      setError((e as Error).message);
+      setPasskeyStep(null);
+      const err = e as Error;
+      setError(
+        withPasskey && /NotAllowed|Abort|cancel|timed out/i.test(`${err.name} ${err.message}`)
+          ? "The passkey prompt was cancelled or timed out. Try again, or confirm without a passkey."
+          : err.message,
+      );
       setPhase("proposed");
     }
   }
@@ -186,7 +231,13 @@ export function ShopClient({
               <Link href="/demo" className="text-accent underline">
                 guided demo
               </Link>{" "}
-              with seeded orders, receipts and disputes.
+              with seeded orders, receipts and disputes, or try the purchase with the example proposal (prepared without the AI, and
+              labelled so on its receipt).
+              {!proposal && (
+                <button type="button" className="btn btn-secondary mt-2 w-full" onClick={loadExample} disabled={busy}>
+                  Use the example proposal
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -259,28 +310,44 @@ export function ShopClient({
             </motion.div>
           )}
           {proposal && phase === "proposed" && (
-            <motion.div key="actions" {...step} className="flex gap-2">
-              <button type="button" className={`btn flex-1 ${unmet ? "btn-warning" : "btn-primary"}`} onClick={confirm}>
-                {unmet ? "Confirm anyway" : "Confirm and sign"} ·{" "}
-                {money(
-                  (proposal.record.selection.price_cents * proposal.record.selection.quantity) / 100,
-                  proposal.record.selection.currency,
-                )}
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={change}>
-                Change
-              </button>
+            <motion.div key="actions" {...step} className="space-y-2">
+              <div className="flex gap-2">
+                <button type="button" className={`btn flex-1 ${unmet ? "btn-warning" : "btn-primary"}`} onClick={() => confirm(canPasskey)}>
+                  {unmet ? "Confirm anyway" : canPasskey ? "Confirm with passkey" : "Confirm and sign"} ·{" "}
+                  {money(
+                    (proposal.record.selection.price_cents * proposal.record.selection.quantity) / 100,
+                    proposal.record.selection.currency,
+                  )}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={change}>
+                  Change
+                </button>
+              </div>
+              {canPasskey && (
+                <button type="button" className="btn btn-ghost w-full text-sm" onClick={() => confirm(false)}>
+                  Confirm without a passkey
+                </button>
+              )}
             </motion.div>
           )}
           {phase === "confirming" && (
             <motion.p key="confirming" {...step} className="flex items-center gap-2 text-sm text-ink-3" role="status">
-              <Spinner /> Signing your confirmation…
+              <Spinner />{" "}
+              {passkeyStep === "creating"
+                ? "Create a passkey for this browser: your device will ask."
+                : passkeyStep === "signing"
+                  ? "Approve with your passkey: it signs this card's hash."
+                  : "Signing your confirmation…"}
             </motion.p>
           )}
           {(phase === "pay" || phase === "capturing") && proposal && (
             <motion.div key="pay" {...step} className="card p-4 space-y-3">
               <p className="text-sm">
-                <Badge tone="success">Confirmed</Badge> <span className="ml-1">Signed into the ledger. Pay with PayPal (sandbox):</span>
+                <Badge tone="success">Confirmed</Badge>{" "}
+                <span className="ml-1">
+                  {signedWithPasskey ? "Signed with your passkey and into the ledger." : "Signed into the ledger."} Pay with PayPal
+                  (sandbox):
+                </span>
               </p>
               {paypalClientId ? (
                 <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD", intent: "capture" }}>
@@ -364,7 +431,9 @@ function ConfirmationCard({ proposal }: { proposal: Proposal }) {
             <CardRow key={i} line={l} delay={0.2 + Math.min(i, 12) * 0.045} />
           ))}
         </ul>
-        <p className="mt-4 text-xs text-ink-3">The exact text above is hashed (SHA-256) and signed when you confirm.</p>
+        <p className="mt-4 text-xs text-ink-3">
+          The exact text above is hashed (SHA-256) when you confirm. With a passkey, your device signs that hash.
+        </p>
       </div>
     </div>
   );

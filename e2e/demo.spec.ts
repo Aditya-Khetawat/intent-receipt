@@ -44,6 +44,36 @@ test("an evidence pack verifies at /verify, and an edited one fails", async ({ p
   await expect(page.getByText("The readable record differs from the one signed")).toBeVisible();
 });
 
+test("confirm with a passkey, then verify it on the receipt and in the evidence pack", async ({ page, request }) => {
+  const health = await (await request.get("/api/health")).json();
+  test.skip(health.aiAvailable, "The example proposal is offered only while the AI is unavailable (run with AI_PROVIDER=off).");
+  // A virtual platform authenticator: a real WebAuthn ceremony without touching the machine's own passkeys.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: { protocol: "ctap2", transport: "internal", hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
+  });
+
+  await page.goto("/shop");
+  await page.waitForLoadState("networkidle"); // hydrated, so the click reaches React
+  const example = page.waitForResponse("**/api/agent/example");
+  await page.getByRole("button", { name: "Use the example proposal" }).click();
+  const intentId = (await (await example).json()).intent.id as string;
+  await page.getByRole("button", { name: /Confirm with passkey/ }).click();
+  await expect(page.getByText("Signed with your passkey and into the ledger.")).toBeVisible({ timeout: 15_000 });
+
+  await page.goto(`/receipt/${intentId}`);
+  await expect(page.getByText(/passkey signed that hash on their device/)).toBeVisible();
+  await page.getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByText(/Buyer passkey verified in your browser/)).toBeVisible();
+
+  const pack = await (await request.get(`/api/evidence/${intentId}`)).body();
+  await page.goto("/verify");
+  await page.locator('input[type="file"]').setInputFiles({ name: "pack.pdf", mimeType: "application/pdf", buffer: pack });
+  await expect(page.getByRole("status").filter({ hasText: "Verified:" })).toBeVisible();
+  await expect(page.getByText(/Signed by passkey .* over this card's hash/)).toBeVisible();
+});
+
 test("theme toggle switches to dark and persists across a reload", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");

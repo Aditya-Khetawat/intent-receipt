@@ -6,6 +6,8 @@ export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
   retries: 0,
+  // One worker: the dev server reloads open pages while it compiles routes for parallel tests.
+  workers: 1,
   use: { baseURL: `http://localhost:${port}`, trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

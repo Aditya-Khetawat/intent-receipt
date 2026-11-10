@@ -6,6 +6,7 @@ import { describeAttributes } from "@/lib/intents";
 import type { CheckResult } from "@/lib/catalog/constraints";
 import { AlertIcon, Badge, CheckIcon, CopyHash, CrossIcon, SourceBadge, money, shortDate } from "@/components/ui";
 import { VerifyPanel } from "@/components/VerifyPanel";
+import { PASSKEY_ALG_NAME } from "@/lib/passkey/verify";
 
 export const dynamic = "force-dynamic";
 
@@ -125,16 +126,32 @@ export default async function ReceiptPage({ params }: PageProps<"/receipt/[inten
           <Row label="You confirmed">
             {r.confirmation ? (
               <>
-                <p className="text-sm text-ink-2">
-                  This exact card text was shown, then hashed and signed when {r.buyer.display_name} pressed Confirm on{" "}
-                  {shortDate(r.confirmation.confirmed_at)}.
-                </p>
+                {r.confirmation.passkey ? (
+                  <p className="text-sm text-ink-2">
+                    This exact card text was shown and hashed, and {r.buyer.display_name}&apos;s passkey signed that hash on their device on{" "}
+                    {shortDate(r.confirmation.confirmed_at)}. <Badge tone="success">Passkey</Badge>
+                  </p>
+                ) : (
+                  <p className="text-sm text-ink-2">
+                    This exact card text was shown, then hashed and signed when {r.buyer.display_name} pressed Confirm on{" "}
+                    {shortDate(r.confirmation.confirmed_at)}, without a passkey.
+                  </p>
+                )}
                 <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-paper border border-line p-4 text-[13px] font-mono leading-6">
                   {r.confirmation.presented_text}
                 </pre>
                 <p className="mt-2 text-sm text-ink-3 flex flex-wrap items-center gap-x-2">
                   SHA-256 <CopyHash value={r.confirmation.presented_text_sha256} chars={24} label="card text hash" />
                 </p>
+                {r.confirmation.passkey && (
+                  <p className="mt-1 text-sm text-ink-3 flex flex-wrap items-center gap-x-2">
+                    Passkey <CopyHash value={r.confirmation.passkey.credential_id} chars={16} label="passkey credential id" />
+                    <span aria-hidden>·</span>
+                    {PASSKEY_ALG_NAME[r.confirmation.passkey.alg] ?? r.confirmation.passkey.alg}
+                    <span aria-hidden>·</span>
+                    {r.confirmation.passkey.user_verified ? "buyer verified on the device" : "presence only"}
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-sm text-ink-3">Not confirmed yet.</p>
