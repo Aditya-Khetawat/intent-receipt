@@ -4,6 +4,11 @@ import { cardText, confirmationCard, confirmIntent, getIntent } from "@/lib/inte
 import { createExampleProposal, ensureSession } from "@/lib/ai/agent";
 import { confirmOptions, registrationOptions, verifyConfirmation, verifyRegistration } from "@/lib/passkey/server";
 import { softAuthenticator } from "./helpers/softAuthenticator";
+import { verifyPasskeyProof } from "@/lib/passkey/verify";
+import { verifyEvidenceBundle } from "@/lib/evidence/verify";
+import { buildEvidenceBundle } from "@/lib/evidence/bundle";
+import { publicKeyDocument } from "@/lib/ledger/keys";
+import { sha256Hex } from "@/lib/ledger";
 
 const textOf = (id: string) => cardText(confirmationCard(getIntent(id)!.record));
 const flip = (b64u: string) => {
@@ -77,11 +82,62 @@ describe("passkey confirmation", () => {
     await expect(verifyConfirmation(sid, draft.id, textOf(draft.id), res2)).rejects.toThrow(/passkey/i);
   });
 
+  it("refuses a registration that reuses another session's credential id", async () => {
+    const { sid, auth } = await registered();
+    const intruder = ensureSession(null);
+    await expect(verifyRegistration(intruder, auth.register(await registrationOptions(intruder)))).rejects.toThrow(/already registered/);
+    const draft = createExampleProposal(sid);
+    expect((await confirmOptions(sid, draft.id)).registered).toBe(true);
+  });
+
   it("cannot use another browser session's passkey", async () => {
     const { auth } = await registered();
     const other = ensureSession(null);
     const draft = createExampleProposal(other);
     expect(await confirmOptions(other, draft.id)).toEqual({ registered: false });
     void auth;
+  });
+});
+
+describe("passkey proof in receipts and packs", () => {
+  beforeEach(() => {
+    resetTestDb();
+  });
+
+  async function passkeyReceipt() {
+    const { sid, auth } = await registered();
+    const draft = createExampleProposal(sid);
+    const proof = await verifyConfirmation(sid, draft.id, textOf(draft.id), auth.sign((await confirmOptions(sid, draft.id)).options!));
+    return confirmIntent(draft.id, textOf(draft.id), "nonce-12345678", { passkey: proof });
+  }
+
+  it("verifies in the shared checker and makes the pack verify", async () => {
+    const intent = await passkeyReceipt();
+    expect((await verifyPasskeyProof(intent.record)).ok).toBe(true);
+    const r = await verifyEvidenceBundle(buildEvidenceBundle(intent.id), { trustedKey: publicKeyDocument() });
+    expect(r.checks.find((c) => c.id === "passkey")).toMatchObject({ ok: true });
+    expect(r.verdict).toBe("verified");
+  });
+
+  it("fails when the card text and its hash are both rewritten", async () => {
+    const intent = await passkeyReceipt();
+    const rec = JSON.parse(JSON.stringify(intent.record));
+    rec.confirmation.presented_text = "Brightpine Ridge Pack (black, 30 L)";
+    rec.confirmation.presented_text_sha256 = sha256Hex(rec.confirmation.presented_text);
+    expect(await verifyPasskeyProof(rec)).toMatchObject({ ok: false, detail: expect.stringMatching(/challenge/) });
+  });
+
+  it("fails on a flipped signature byte", async () => {
+    const intent = await passkeyReceipt();
+    const rec = JSON.parse(JSON.stringify(intent.record));
+    rec.confirmation.passkey.signature = flip(rec.confirmation.passkey.signature);
+    const r = await verifyPasskeyProof(rec);
+    expect(r.ok).toBe(false);
+  });
+
+  it("reports a seeded button confirmation as not used, without failing the pack", async () => {
+    const r = await verifyEvidenceBundle(buildEvidenceBundle("ir_seed_s1_ridge40"), { trustedKey: publicKeyDocument() });
+    expect(r.checks.find((c) => c.id === "passkey")).toMatchObject({ ok: null });
+    expect(r.verdict).toBe("verified");
   });
 });

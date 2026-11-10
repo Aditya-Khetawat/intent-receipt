@@ -29,7 +29,7 @@ export interface EvidenceBundle {
   };
 }
 
-export type CheckId = "schema" | "chain" | "signatures" | "key" | "record" | "card" | "order" | "fulfillment";
+export type CheckId = "schema" | "chain" | "signatures" | "key" | "record" | "card" | "passkey" | "order" | "fulfillment";
 
 /** ok: true passed, false failed, null not checkable here. */
 export interface Check {

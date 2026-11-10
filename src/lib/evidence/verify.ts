@@ -8,6 +8,7 @@ import {
   type LedgerEntry,
   type RedactedLedgerEntry,
 } from "@/lib/ledger/canonical";
+import { verifyPasskeyProof } from "@/lib/passkey/verify";
 import { EVIDENCE_SCHEMA, type BundleVerification, type Check, type EvidenceBundle } from "./types";
 
 // Runs on Web Crypto only, so the receipt page, /verify and the tests share one code path.
@@ -174,6 +175,8 @@ export async function verifyEvidenceBundle(
         : "The confirmed text does not match its SHA-256.",
   });
 
+  const passkey = await verifyPasskeyProof(b.intent_record, subtle);
+  checks.push({ id: "passkey", ok: passkey.ok, label: "Buyer's passkey", detail: passkey.detail });
   checks.push(orderCheck(b, ownOf, confirmed?.hash));
   checks.push({
     id: "fulfillment",

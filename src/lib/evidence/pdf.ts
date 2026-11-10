@@ -1,5 +1,6 @@
 import { PDFDocument, PageSizes, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import type { EvidenceBundle } from "./types";
+import { PASSKEY_ALG_NAME } from "@/lib/passkey/verify";
 
 // The human-readable side of the pack. PayPal accepts only images and PDFs as evidence, so the
 // machine-checkable JSON travels inside this PDF as an embedded file.
@@ -158,11 +159,23 @@ export async function renderEvidencePdf(b: EvidenceBundle): Promise<Uint8Array> 
   for (const line of r.confirmation?.presented_text.split("\n") ?? []) w.text(line, { size: 10, gap: 1 });
   w.y -= 4;
   if (r.confirmation) {
+    const pk = r.confirmation.passkey;
     w.field(
       "Confirmed",
-      `${r.confirmation.confirmed_at} · by ${r.confirmation.method === "ui_button" ? "button press on the card" : r.confirmation.method}`,
+      `${r.confirmation.confirmed_at} · ${
+        pk
+          ? `with the buyer's passkey (WebAuthn ${PASSKEY_ALG_NAME[pk.alg] ?? pk.alg}${pk.user_verified ? ", user verified on the device" : ""})`
+          : "by a button press on the card, without a passkey"
+      }`,
     );
     w.field("SHA-256 of the card text", r.confirmation.presented_text_sha256, true);
+    if (pk) {
+      w.field("Passkey credential", `${pk.credential_id} · site ${pk.rp_id}`, true);
+      w.text(
+        "The buyer's passkey signed a challenge built from this receipt's id, the card hash above and a one-time nonce. The signature and public key are in the embedded JSON; /verify re-checks them.",
+        { size: 9, color: MUTED },
+      );
+    }
   }
 
   w.heading("What the code checked");

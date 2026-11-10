@@ -6,11 +6,13 @@ import { BusyLabel, CheckIcon, CrossIcon } from "./ui";
 import { EASE } from "./motion";
 import type { LedgerEntry, RedactedLedgerEntry } from "@/lib/ledger/canonical";
 import { verifyChain, type ChainLink as Link } from "@/lib/evidence/verify";
+import { verifyPasskeyProof } from "@/lib/passkey/verify";
+import type { IntentRecord } from "@/lib/intents";
 
 type Result =
   | { state: "idle" }
   | { state: "running" }
-  | { state: "ok"; links: Link[]; keyId: string; sigMode: "browser" | "server" }
+  | { state: "ok"; links: Link[]; keyId: string; sigMode: "browser" | "server"; passkey: { ok: boolean | null; detail: string } }
   | { state: "fail"; links: Link[]; seq: number; reason: string };
 
 const ownCount = (links: Link[]) => links.filter((l) => l.own).length;
@@ -41,7 +43,13 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
       if (c.sigMode === "none" && !data.server_verification.ok) {
         return setResult({ state: "fail", links: c.links, seq: 0, reason: "server signature check failed" });
       }
-      setResult({ state: "ok", links: c.links, keyId: data.key.key_id, sigMode: c.sigMode === "browser" ? "browser" : "server" });
+      // The buyer's passkey signature, re-checked from the signed confirmation entry.
+      const confirmed = data.entries.find((e): e is LedgerEntry => !("redacted" in e) && e.type === "INTENT_CONFIRMED");
+      const record = (confirmed?.payload as { intent_record?: IntentRecord } | undefined)?.intent_record;
+      const passkey = record ? await verifyPasskeyProof(record) : { ok: null, detail: "Not confirmed yet." };
+      if (passkey.ok === false)
+        return setResult({ state: "fail", links: c.links, seq: confirmed!.seq, reason: `buyer passkey: ${passkey.detail}` });
+      setResult({ state: "ok", links: c.links, keyId: data.key.key_id, sigMode: c.sigMode === "browser" ? "browser" : "server", passkey });
     } catch (e) {
       setResult({ state: "fail", links: [], seq: 0, reason: (e as Error).message });
     }
@@ -94,6 +102,11 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
               {result.sigMode === "browser"
                 ? "Ed25519 signatures verified in your browser."
                 : "Your browser lacks Ed25519 in Web Crypto, so signatures were verified on the server."}
+            </span>
+            <span className="block font-normal text-sm mt-1">
+              {result.passkey.ok === true
+                ? `Buyer passkey verified in your browser. ${result.passkey.detail}`
+                : `Buyer passkey: ${result.passkey.detail}`}
             </span>
           </motion.div>
         )}
