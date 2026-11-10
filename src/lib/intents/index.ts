@@ -4,6 +4,7 @@ import { appendLedger, entriesForIntent, sha256Hex } from "@/lib/ledger";
 import { getVariant } from "@/lib/catalog";
 import { checkConstraints, hasUnmet, type CheckResult, type Constraint } from "@/lib/catalog/constraints";
 import type { VariantAttributes } from "@/lib/catalog/data";
+import type { PasskeyProof } from "@/lib/passkey/encoding";
 
 export const INTENT_SCHEMA_VERSION = "intent-record/0.1";
 
@@ -36,8 +37,10 @@ export interface IntentRecord {
     presented_text: string;
     presented_text_sha256: string;
     confirmed_at: string;
-    method: "ui_button";
+    /** "passkey": the buyer's passkey signed a challenge derived from presented_text_sha256. */
+    method: "ui_button" | "passkey";
     client_nonce: string;
+    passkey?: PasskeyProof;
   };
 }
 
@@ -220,7 +223,7 @@ export function confirmIntent(
   intentId: string,
   presentedText: string,
   clientNonce: string,
-  opts: { confirmedAt?: string; presentedTextOverride?: string } = {},
+  opts: { confirmedAt?: string; presentedTextOverride?: string; passkey?: PasskeyProof } = {},
 ): IntentRow {
   const intent = getIntent(intentId);
   if (!intent) throw new IntentError("Intent not found");
@@ -235,8 +238,9 @@ export function confirmIntent(
       presented_text: expected,
       presented_text_sha256: sha256Hex(expected),
       confirmed_at: opts.confirmedAt ?? nowIso(),
-      method: "ui_button",
+      method: opts.passkey ? "passkey" : "ui_button",
       client_nonce: clientNonce.slice(0, 64),
+      ...(opts.passkey ? { passkey: opts.passkey } : {}),
     },
   };
   const recordSha = sha256Hex(JSON.stringify(record));

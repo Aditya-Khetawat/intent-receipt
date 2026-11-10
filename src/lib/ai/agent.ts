@@ -9,6 +9,7 @@ import { createDraftIntent, IntentError, type IntentRow } from "@/lib/intents";
 import { toolkitGetOrder } from "@/lib/paypal/toolkit";
 import { aiStatus, runAgentTurn } from "./provider";
 import { loadPrompt } from "./prompts";
+import { SCENARIOS } from "@/lib/disputes/scenarios";
 
 export const MAX_MESSAGES_PER_SESSION = 24;
 const NUMERIC_KEYS = new Set(["max_price", "min_price", "capacity_liters", "length_m", "quantity"]);
@@ -21,6 +22,26 @@ export function ensureSession(sessionId: string | null): string {
   const id = `ses_${ulid()}`;
   db.prepare("INSERT INTO agent_sessions (id, buyer_id, created_at) VALUES (?, ?, ?)").run(id, DEFAULT_BUYER.id, nowIso());
   return id;
+}
+
+/**
+ * The S1 proposal, built without the AI for when the live agent is unavailable. Same draft path and
+ * constraint check as a real proposal; the agent fields say plainly that no model was involved.
+ */
+export function createExampleProposal(sessionId: string): IntentRow {
+  const s = SCENARIOS[0];
+  return createDraftIntent({
+    sessionId,
+    buyer: DEFAULT_BUYER,
+    agent: { name: "Example proposal (AI unavailable)", provider: "none", model: "none", prompt_version: "example@1" },
+    turns: [{ role: "user", text: s.turns[0].text, at: nowIso() }],
+    product_id: s.product_id,
+    variant_id: s.variant_id,
+    quantity: 1,
+    rationale: s.rationale,
+    extracted_constraints: s.constraints,
+    assumptions: s.assumptions,
+  });
 }
 
 interface MsgRow {
