@@ -4,23 +4,8 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { BusyLabel, CheckIcon, CrossIcon } from "./ui";
 import { EASE } from "./motion";
-import {
-  bytesToHex,
-  entryBodyInput,
-  entryHashInput,
-  GENESIS_HASH,
-  hexToBytes,
-  type LedgerEntry,
-  type RedactedLedgerEntry,
-} from "@/lib/ledger/canonical";
-
-/** One checked ledger entry, drawn as a link in the chain trail. */
-interface Link {
-  seq: number;
-  type: string;
-  own: boolean;
-  ok: boolean;
-}
+import type { LedgerEntry, RedactedLedgerEntry } from "@/lib/ledger/canonical";
+import { verifyChain, type ChainLink as Link } from "@/lib/evidence/verify";
 
 type Result =
   | { state: "idle" }
@@ -29,8 +14,6 @@ type Result =
   | { state: "fail"; links: Link[]; seq: number; reason: string };
 
 const ownCount = (links: Link[]) => links.filter((l) => l.own).length;
-const b64ToBytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-const sha256 = async (s: string) => bytesToHex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
 
 // The trail replays the check in order; long chains compress so it never takes over a second.
 const STEP = 0.045;
@@ -45,7 +28,6 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
   async function verify() {
     setResult({ state: "running" });
     setRun((r) => r + 1);
-    const links: Link[] = [];
     try {
       const res = await fetch(`/api/ledger/${intentId}`, { cache: "no-store" });
       const data = (await res.json()) as {
@@ -53,35 +35,15 @@ export function VerifyPanel({ intentId, serverOk, count, keyId }: { intentId: st
         server_verification: { ok: boolean };
         key: { key_id: string; jwk: JsonWebKey };
       };
-      let key: CryptoKey | null = null;
-      try {
-        key = await crypto.subtle.importKey("jwk", { ...data.key.jwk, ext: true }, { name: "Ed25519" }, false, ["verify"]);
-      } catch {
-        key = null; // browser lacks Ed25519 in Web Crypto: fall back to server signature check
+      const c = await verifyChain(data.entries, data.key.jwk);
+      if (!c.ok) return setResult({ state: "fail", links: c.links, seq: c.failSeq ?? 0, reason: c.reason ?? "verification failed" });
+      // A browser without Ed25519 in Web Crypto falls back to the server's signature check.
+      if (c.sigMode === "none" && !data.server_verification.ok) {
+        return setResult({ state: "fail", links: c.links, seq: 0, reason: "server signature check failed" });
       }
-      const fail = (e: LedgerEntry | RedactedLedgerEntry, reason: string) => {
-        links.push({ seq: e.seq, type: e.type, own: !("redacted" in e), ok: false });
-        setResult({ state: "fail", links, seq: e.seq, reason });
-      };
-      let prev = GENESIS_HASH;
-      for (const e of data.entries) {
-        if (e.prev_hash !== prev) return fail(e, "chain link broken (prev_hash mismatch)");
-        // This receipt's entries: recompute the body digest from the content.
-        // Other receipts' entries arrive redacted, with only their body digest.
-        const bodySha = "redacted" in e ? e.body_sha256 : await sha256(entryBodyInput(e));
-        const digest = await sha256(entryHashInput({ seq: e.seq, type: e.type, prev_hash: e.prev_hash, body_sha256: bodySha }));
-        if (digest !== e.hash) return fail(e, "hash does not match the entry contents");
-        if (key) {
-          const ok = await crypto.subtle.verify({ name: "Ed25519" }, key, b64ToBytes(e.signature), hexToBytes(e.hash));
-          if (!ok) return fail(e, "signature invalid");
-        }
-        links.push({ seq: e.seq, type: e.type, own: !("redacted" in e), ok: true });
-        prev = e.hash;
-      }
-      if (!key && !data.server_verification.ok) return setResult({ state: "fail", links, seq: 0, reason: "server signature check failed" });
-      setResult({ state: "ok", links, keyId: data.key.key_id, sigMode: key ? "browser" : "server" });
+      setResult({ state: "ok", links: c.links, keyId: data.key.key_id, sigMode: c.sigMode === "browser" ? "browser" : "server" });
     } catch (e) {
-      setResult({ state: "fail", links, seq: 0, reason: (e as Error).message });
+      setResult({ state: "fail", links: [], seq: 0, reason: (e as Error).message });
     }
   }
 
