@@ -88,7 +88,8 @@ export function DemoRunner({
         <Step n={1} title="Open a receipt and press Verify">
           <p>
             A receipt records what the buyer asked, what the agent chose, the code&apos;s check, and the exact card the buyer confirmed, all
-            signed and chained. Verify re-checks the chain in your browser. Then compare with S2, where the agent got it wrong.
+            signed and chained. Verify re-checks the chain in your browser. Then compare with S2, where the agent got it wrong. Each receipt
+            also exports as an evidence pack: a PDF for PayPal disputes with the signed receipt inside, which anyone can check at /verify.
           </p>
           <div className="flex flex-wrap gap-2 mt-3">
             <Link href={`/receipt/${scenarios[0].intentId}`} className="btn btn-primary">
@@ -98,8 +99,8 @@ export function DemoRunner({
             <Link href={`/receipt/${scenarios[1].intentId}`} className="btn btn-secondary">
               S2 receipt (agent at fault)
             </Link>
-            <Link href="/orders" className="btn btn-ghost">
-              All orders
+            <Link href="/verify" className="btn btn-ghost">
+              Check an evidence pack
             </Link>
           </div>
         </Step>

@@ -15,8 +15,10 @@ test("guided demo: S1 dispute end to end", async ({ page }) => {
 
   await page.getByRole("button", { name: "Review request…" }).click();
   await expect(page.getByText(/provide-evidence/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "IntentReceipt-evidence-ir_seed_s1_ridge40.pdf" })).toBeVisible();
   await page.getByRole("button", { name: "Approve (simulated send)" }).click();
   await expect(page.getByText("Action log")).toBeVisible();
+  await expect(page.getByText("Attached", { exact: true })).toBeVisible();
 
   await page.goto("/merchant");
   await expect(page.getByRole("gridcell", { name: "Maya Rao" })).toBeVisible();
@@ -26,6 +28,20 @@ test("receipt verifies in the browser", async ({ page }) => {
   await page.goto("/receipt/ir_seed_s1_ridge40");
   await page.getByRole("button", { name: "Verify" }).click();
   await expect(page.getByText(/Chain intact, \d+ entries, signed by/)).toBeVisible();
+});
+
+test("an evidence pack verifies at /verify, and an edited one fails", async ({ page, request }) => {
+  const pdf = await (await request.get("/api/evidence/ir_seed_s1_ridge40")).body();
+  await page.goto("/verify");
+  const input = page.locator('input[type="file"]');
+  await input.setInputFiles({ name: "pack.pdf", mimeType: "application/pdf", buffer: pdf });
+  await expect(page.getByRole("status").filter({ hasText: "Verified:" })).toBeVisible();
+
+  const json = await (await request.get("/api/evidence/ir_seed_s1_ridge40?format=json")).json();
+  json.intent_record.selection.price_cents = 100;
+  await input.setInputFiles({ name: "edited.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(json)) });
+  await expect(page.getByRole("status").filter({ hasText: "Failed:" })).toBeVisible();
+  await expect(page.getByText("The readable record differs from the one signed")).toBeVisible();
 });
 
 test("theme toggle switches to dark and persists across a reload", async ({ page }) => {
@@ -39,7 +55,7 @@ test("theme toggle switches to dark and persists across a reload", async ({ page
 });
 
 for (const colorScheme of ["light", "dark"] as const)
-  for (const path of ["/", "/shop", "/demo", "/orders", "/merchant", "/receipt/ir_seed_s2_cable1m"]) {
+  for (const path of ["/", "/shop", "/demo", "/orders", "/merchant", "/receipt/ir_seed_s2_cable1m", "/verify"]) {
     test(`no serious accessibility violations on ${path} (${colorScheme})`, async ({ page }) => {
       // The OS setting picks the theme when nothing is saved; reduced motion keeps entrance animations from skewing contrast.
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
