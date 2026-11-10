@@ -83,7 +83,7 @@ function isBundle(x: unknown): x is EvidenceBundle {
 /** Checks a pack on its own terms, then (if given) against the key IntentReceipt publishes. */
 export async function verifyEvidenceBundle(
   input: unknown,
-  opts: { trustedKey?: { key_id: string; jwk: { x: string } } | null; subtle?: SubtleCrypto } = {},
+  opts: { trustedKey?: { key_id: string; jwk: { kty: string; crv: string; x: string } } | null; subtle?: SubtleCrypto } = {},
 ): Promise<BundleVerification> {
   const subtle = opts.subtle ?? crypto.subtle;
   if (!isBundle(input)) {
@@ -100,7 +100,9 @@ export async function verifyEvidenceBundle(
   const own = b.ledger.entries.filter(isOwn).filter((e) => e.intent_id === b.intent_id);
   const ownOf = (type: string) => own.find((e) => e.type === type);
 
-  const chain = await verifyChain(b.ledger.entries, b.ledger.key.jwk, subtle);
+  const t = opts.trustedKey;
+  // Signatures are checked against the published key when we have it: a pack can name any key it likes.
+  const chain = await verifyChain(b.ledger.entries, t?.jwk ?? b.ledger.key.jwk, subtle);
   const foreignKey = b.ledger.entries.find((e) => e.key_id !== b.ledger.key.key_id);
   checks.push({
     id: "chain",
@@ -123,11 +125,13 @@ export async function verifyEvidenceBundle(
             : sig(null, "Not checked past the broken entry."),
   );
 
-  const t = opts.trustedKey;
   checks.push(
     !t
       ? { id: "key", ok: null, label: "Published signing key", detail: "Not compared: the published key could not be fetched." }
-      : t.key_id === b.ledger.key.key_id && t.jwk.x === b.ledger.key.jwk.x
+      : t.key_id === b.ledger.key.key_id &&
+          t.jwk.kty === b.ledger.key.jwk.kty &&
+          t.jwk.crv === b.ledger.key.jwk.crv &&
+          t.jwk.x === b.ledger.key.jwk.x
         ? { id: "key", ok: true, label: "Published signing key", detail: `Matches the key IntentReceipt publishes (${t.key_id}).` }
         : {
             id: "key",
@@ -183,7 +187,7 @@ export async function verifyEvidenceBundle(
   const ok = (id: string) => checks.find((x) => x.id === id)!.ok;
   const verdict = checks.some((x) => x.ok === false)
     ? "failed"
-    : ["chain", "record", "card", "signatures"].every((id) => ok(id) === true)
+    : ["chain", "record", "card", "signatures", "key"].every((id) => ok(id) === true)
       ? "verified"
       : "partial";
   return { verdict, checks, bundle: b };
