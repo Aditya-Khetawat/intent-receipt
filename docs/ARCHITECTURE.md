@@ -34,6 +34,7 @@ flowchart TD
 | `src/lib/ai/agent.ts` | Shopping agent turn: tools `search_catalog`, `get_product`, `propose_selection`, `check_order_status` (toolkit). |
 | `src/lib/ai/validator.ts` | JSON Pointer resolution, value comparison, instruction-like text detection. |
 | `src/lib/disputes/` | Ingest (webhook + simulated share one path), context builder, analyst pipeline with fallback, actions with stored previews. |
+| `src/lib/passkey/` | Passkey confirmation: WebAuthn registration and signed-confirm ceremonies (`@simplewebauthn/server`), the challenge derived from the card hash, and a Web Crypto re-check shared by the receipt page, `/verify` and the tests. |
 | `src/lib/evidence/` | Evidence pack: bundle builder (server), PDF renderer with the JSON embedded, PDF reader, and the verifier shared by the receipt page, `/verify` and the tests (Web Crypto only). |
 | `prompts/*.md` | Versioned prompts (`shop-agent@1`, `dispute-analyst@4`). |
 
@@ -54,6 +55,17 @@ flowchart TD
 `body_sha256 = SHA-256(canonical_json({intent_id, payload}))` and `hash = SHA-256(canonical_json({seq, type, prev_hash, body_sha256}))`, genesis `prev_hash` = 64 zeros. Splitting out the body digest lets the receipt page verify the whole chain while every other receipt is shared as headers only (no intent id, no payload): see `chainForIntent()`. Canonical JSON = keys sorted recursively, no whitespace, `JSON.stringify` escaping, finite numbers only (matches RFC 8785 for the values we store). Signature = Ed25519 over the 32 hash bytes. Public key at `/.well-known/intent-receipt-key.json` (JWK + SPKI).
 
 "Tamper-evident", not "tamper-proof": someone with database write access can change rows, but the change is detected by Verify (first bad `seq` reported) unless they also hold the signing key.
+
+## Passkey confirmation
+
+The buyer can confirm with a passkey (WebAuthn) instead of a plain button press.
+
+- **What gets signed.** The challenge is `SHA-256(canonical_json({ scheme: "webauthn-confirm/1", intent_id, presented_text_sha256, nonce }))`. The nonce is single-use and issued by the server per purchase. Every input is stored in the signed record, so anyone holding the receipt can recompute what the passkey signed.
+- **Server.** `@simplewebauthn/server` checks registration and assertion: origin, RP ID (the host of `APP_BASE_URL`), the signature and the counter. Challenges are deleted when used, so a response can't be replayed or moved to another purchase. Credentials are bound to the browser session that created them, and a credential id can't be registered twice.
+- **Record.** The full assertion (authenticator data, client data, signature, public key as JWK, algorithm, nonce, user-verified flag) goes into `confirmation.passkey`, with `method: "passkey"`. INTENT_CONFIRMED then signs it into the ledger with the rest of the record.
+- **Re-check.** `verifyPasskeyProof` (Web Crypto: ES256, RS256, EdDSA) recomputes the challenge from the card hash, then checks the client data type and origin, the RP ID hash, the user-presence flag and the signature. It runs in the receipt's Verify, in `/verify` and in the tests. Receipts confirmed without a passkey report "not used" and still verify.
+- **Trust limit.** A passkey proves that the holder of that passkey approved this exact card text, and its private key never leaves their device. It does not prove who that holder is: there are no accounts, and a dishonest merchant could create a passkey of its own. Tying the passkey to a PayPal identity is the next step.
+- **Example proposal.** While the AI is unavailable, the shop offers the S1 proposal built without the model (`createExampleProposal`). Its agent fields read `Example proposal (AI unavailable) · none`, so the receipt says so.
 
 ## Evidence pack
 

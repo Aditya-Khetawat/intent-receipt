@@ -11,8 +11,9 @@ _Last updated: 2026-11-10_
 - **M3 disputes and analyst:** verified webhook endpoint with dedupe; one ingest path for real and simulated disputes; analyst with schema retry, citation validator, corrective re-run, CACHED fallback, ERROR + Retry.
 - **M4 console and demo:** AG Grid queue; dispute detail with verified evidence, balanced views, editable drafts, exact request preview, human approve; `/demo`; S1–S4 seeds; metrics; budget caps.
 - **Evidence pack (2026-11-10):** every receipt exports as a PDF with the signed receipt JSON embedded; contesting attaches it to PayPal `provide-evidence` as `PROOF_OF_RECEIPT_COPY` (stored by SHA-256 before sending); `/verify` checks a pack in the browser against the published key. Real sandbox send is pending a buyer-opened sandbox dispute.
+- **Passkey confirmation (2026-11-11):** the buyer's passkey (WebAuthn) signs a challenge derived from the card hash; the proof is stored in the signed record and re-checked in the browser by Verify, `/verify` and the evidence pack. While the AI is unavailable, the shop offers the S1 example proposal (labelled). E2E uses a Chromium virtual authenticator.
 - **Hardening:** purchases bound to the buyer's browser session; rate limits keyed on a non-forgeable client IP plus a global cap; public reset limited to demo state; AA contrast fixes.
-- **Quality:** `npm run check` green (70 tests), `npm run build` green, `npm run e2e` green (guided-demo smoke, in-browser Verify, evidence pack verify and tamper, axe with no serious/critical violations on 7 pages).
+- **Quality:** `npm run check` green (81 tests), `npm run build` green, `npm run e2e` green (guided-demo smoke, in-browser Verify, evidence pack verify and tamper, passkey confirm with a virtual authenticator, axe with no serious/critical violations on 7 pages).
 
 ## Next (needs owner input; see "Blocked")
 1. Keys → `npm run doctor`, `npm run smoke`, a real sandbox checkout in `/shop`.
