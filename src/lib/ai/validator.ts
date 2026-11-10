@@ -69,10 +69,25 @@ export interface ValidationResult {
   items: ValidationItem[];
 }
 
+/**
+ * For a pointer that misses, the single top-level key that would make it resolve. Models often drop
+ * the "/intent" prefix; the hint goes back in the corrective re-run, and the citation still fails here.
+ */
+export function suggestPointer(context: unknown, pointer: string): string | null {
+  if (context === null || typeof context !== "object" || Array.isArray(context) || !pointer.startsWith("/")) return null;
+  const hits = Object.keys(context)
+    .map((k) => `/${k.replace(/~/g, "~0").replace(/\//g, "~1")}${pointer}`)
+    .filter((p) => resolvePointer(context, p).found);
+  return hits.length === 1 ? hits[0] : null;
+}
+
 export function validateEvidence(context: unknown, evidence: EvidenceLike[]): ValidationResult {
   const items = evidence.map((e): ValidationItem => {
     const r = resolvePointer(context, e.pointer);
-    if (!r.found) return { id: e.id, ok: false, reason: `pointer ${e.pointer} not found in context` };
+    if (!r.found) {
+      const hint = suggestPointer(context, e.pointer);
+      return { id: e.id, ok: false, reason: `pointer ${e.pointer} not found in context${hint ? `; did you mean ${hint}?` : ""}` };
+    }
     if (!valuesEqual(r.value, e.quoted_value)) {
       const shown = typeof r.value === "string" ? r.value.slice(0, 80) : JSON.stringify(r.value)?.slice(0, 80);
       return { id: e.id, ok: false, reason: `quoted value does not match source (source: ${shown})` };

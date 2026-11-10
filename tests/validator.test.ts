@@ -38,6 +38,12 @@ describe("validateEvidence", () => {
     expect(r.verified).toBe(0);
     expect(r.items[0].reason).toMatch(/does not match/);
     expect(r.items[1].reason).toMatch(/not found/);
+    expect(r.items[1].reason).not.toMatch(/did you mean/);
+  });
+  it("names the prefixed pointer when a citation drops the top-level key, but still fails it", () => {
+    const r = validateEvidence(ctx, [{ id: "e1", pointer: "/request/verbatim", quoted_value: "I need a waterproof 40L backpack" }]);
+    expect(r.verified).toBe(0);
+    expect(r.items[0].reason).toBe("pointer /request/verbatim not found in context; did you mean /intent/request/verbatim?");
   });
   it("handles array indexes and unicode", () => {
     expect(validateEvidence(ctx, [{ id: "u", pointer: "/messages/0/content", quoted_value: "Größe falsch — zu groß 🎒" }]).verified).toBe(1);
