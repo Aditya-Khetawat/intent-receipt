@@ -27,6 +27,6 @@ _Last updated: 2026-11-07_
 
 ## Honest gaps
 - Groq free tier is 8K tokens/minute: concurrent visitors queue, and a busy minute falls back to CACHED analyses.
-- AI eval (2026-11-10, prompt dispute-analyst@2): 5 runs per scenario, 12 of 14 returned runs chose the expected action; 6 runs were rate-limited by Groq. Raw citation pass rate 100% (S1 was 71% on @1).
+- AI eval (2026-11-10, prompt dispute-analyst@3): 5 runs per scenario, all 17 returned runs chose the expected action with a self-consistent classification (on @2, 2 of 14 contradicted themselves); 2 runs were rate-limited by Groq and 1 failed the schema. Raw citation pass rate 100% (S1 was 71% on @1). Classification/action pairs are now checked in code against a decision policy.
 - Agent replies are not streamed token-by-token.
 - No login: merchant console and `/demo` are open by design for judges (sandbox + fictional data only).

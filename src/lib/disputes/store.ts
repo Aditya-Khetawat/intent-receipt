@@ -32,6 +32,8 @@ export interface StoredValidation extends ValidationResult {
   attempts: number;
   needs_human_review: boolean;
   injection_flagged: boolean;
+  /** Classification/action contradictions left after the corrective re-run (absent on older rows). */
+  decision_conflicts?: string[];
 }
 
 export interface AnalysisRow {

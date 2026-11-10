@@ -17,13 +17,14 @@ async function main() {
   process.env.SKIP_AUTO_ANALYSIS = "1";
   resetTestDb();
   console.log(`Model: ${env.aiProvider}/${env.aiModelAnalyst} · ${runs} runs per scenario · ${new Date().toISOString()}\n`);
-  console.log("| Scenario | Expected action | Expected action hit | Classification hit | Verified ratio (after validation) | Raw citation pass rate |");
-  console.log("|---|---|---|---|---|---|");
+  console.log("| Scenario | Expected action | Expected action hit | Classification hit | Self-consistent | Verified ratio (after validation) | Raw citation pass rate |");
+  console.log("|---|---|---|---|---|---|---|");
   for (const s of SCENARIOS) {
     const id = (await simulateScenarioDispute(s.key))!;
     const ctx = buildDisputeContext(id);
     let actionHit = 0;
     let classHit = 0;
+    let consistent = 0;
     let verified = 0;
     let shown = 0;
     let raw = 0;
@@ -33,6 +34,8 @@ async function main() {
         if (output.recommended_seller_action === s.expected.action) actionHit++;
         else console.error(`  ${s.key} run ${i + 1} chose ${output.recommended_seller_action} (${output.classification})`);
         if (output.classification === s.expected.classification) classHit++;
+        if (!validation.decision_conflicts?.length) consistent++;
+        else console.error(`  ${s.key} run ${i + 1} still contradicts itself: ${validation.decision_conflicts.join("; ")}`);
         verified += validation.verified;
         shown += validation.verified; // only verified items are ever shown
         raw += validation.verified + validation.failed;
@@ -41,7 +44,7 @@ async function main() {
       }
     }
     console.log(
-      `| ${s.key} | ${s.expected.action} | ${actionHit}/${runs} | ${classHit}/${runs} | ${shown ? Math.round((verified / shown) * 100) : 0}% | ${raw ? Math.round((verified / raw) * 100) : 0}% |`,
+      `| ${s.key} | ${s.expected.action} | ${actionHit}/${runs} | ${classHit}/${runs} | ${consistent}/${runs} | ${shown ? Math.round((verified / shown) * 100) : 0}% | ${raw ? Math.round((verified / raw) * 100) : 0}% |`,
     );
   }
 }

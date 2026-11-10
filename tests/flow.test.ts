@@ -206,6 +206,32 @@ describe("dispute pipeline", () => {
     expect(getDispute(id)!.status).toBe("READY_FOR_REVIEW");
   });
 
+  it("sends a self-contradicting answer back once, then flags it for review if it persists", async () => {
+    const id = (await simulateScenarioDispute("S3"))!;
+    await new Promise((r) => setTimeout(r, 50));
+    const base = loadFixture("S3")!.output;
+    const contested: Analysis = { ...base, recommended_seller_action: "CONTEST" };
+    const prompts: string[] = [];
+    await analyzeDispute(id, async (_sys, prompt) => {
+      prompts.push(prompt);
+      return prompts.length === 1 ? contested : base;
+    });
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toMatch(/CONTRADICTED ITSELF:\n- ITEM_NOT_RECEIVED allows ACCEPT_AND_REFUND, but the action is CONTEST/);
+    expect(prompts[1]).not.toMatch(/FAILED MACHINE VERIFICATION/);
+    let a = latestAnalysis(id)!;
+    expect(a.output.recommended_seller_action).toBe("ACCEPT_AND_REFUND");
+    expect(a.validation.decision_conflicts).toEqual([]);
+    expect(a.validation.needs_human_review).toBe(false);
+
+    getDb().prepare("DELETE FROM analyses WHERE dispute_id = ?").run(id);
+    await analyzeDispute(id, async () => contested);
+    a = latestAnalysis(id)!;
+    expect(a.output.recommended_seller_action).toBe("CONTEST");
+    expect(a.validation.decision_conflicts).toHaveLength(1);
+    expect(a.validation.needs_human_review).toBe(true);
+  });
+
   it("falls back to the labelled CACHED fixture when the AI is unavailable", async () => {
     const id = (await simulateScenarioDispute("S4"))!;
     await analyzeDispute(id);

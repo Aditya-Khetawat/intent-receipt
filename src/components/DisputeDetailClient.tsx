@@ -133,6 +133,10 @@ function Section({ title, children, aside }: { title: string; children: React.Re
   );
 }
 
+// "ITEM_NOT_RECEIVED allows ACCEPT_AND_REFUND, …" reads as "item not received allows accept and refund, …".
+const humanizeConflict = (c: string) =>
+  c.replace(/\b[A-Z][A-Z_]{2,}\b/g, (t) => humanize(t).toLowerCase()).replace("agent_fault", "agent fault");
+
 /** The AI's call, its confidence, and how much of its evidence survived the code check, in one place. */
 function Verdict({ d, fresh }: { d: DisputeDetail; fresh: boolean }) {
   const a = d.analysis!;
@@ -194,8 +198,18 @@ function Verdict({ d, fresh }: { d: DisputeDetail; fresh: boolean }) {
         <p className="mt-4 flex gap-2 rounded-lg bg-warning-soft text-warning p-3 text-sm">
           <AlertIcon className="mt-0.5 flex-none" />
           <span>
-            <strong className="font-semibold">Check before acting.</strong> {v.verified === 0 ? "None of" : "Several of"} the analyst&apos;s
-            citations failed verification on both passes, so this recommendation rests on less evidence than usual.
+            <strong className="font-semibold">Check before acting.</strong>{" "}
+            {v.decision_conflicts?.length ? (
+              <>
+                The analyst&apos;s classification and recommendation disagree, even after the code sent them back once:{" "}
+                {v.decision_conflicts.map(humanizeConflict).join("; ")}. Decide from the evidence yourself.
+              </>
+            ) : (
+              <>
+                {v.verified === 0 ? "None of" : "Several of"} the analyst&apos;s citations failed verification on both passes, so this
+                recommendation rests on less evidence than usual.
+              </>
+            )}
           </span>
         </p>
       )}
