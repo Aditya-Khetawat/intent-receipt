@@ -7,7 +7,7 @@ When an AI agent buys something for you, IntentReceipt records exactly what you 
 [![License: MIT](https://img.shields.io/badge/license-MIT-0E7C7B.svg)](LICENSE) ![PayPal sandbox](https://img.shields.io/badge/PayPal-sandbox-2457A6.svg) ![Tests](https://img.shields.io/badge/tests-81%20unit%20%2B%2019%20e2e-1E7F4F.svg)
 
 - **Live demo:** [intentreceipt.onrender.com](https://intentreceipt.onrender.com) → click **Run guided demo** (no account needed)
-- **Video (2:40):** [add YouTube link]
+- **Video (2:36):** [youtu.be/QcPsoGghTVs](https://youtu.be/QcPsoGghTVs)
 - **Judges' 5-minute path:** [docs/JUDGES.md](docs/JUDGES.md)
 
 > Built for the PayPal AI Hackathon, "Build What's Next with PayPal and AI". PayPal sandbox only: no real money moves.

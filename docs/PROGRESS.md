@@ -17,7 +17,7 @@ _Last updated: 2026-11-10_
 
 ## Next (owner, before Thu 2026-11-12 12:00 pm PT)
 1. Confirm one purchase with a real passkey on the live `/shop` and press Verify on its receipt.
-2. Record the video (`docs/VIDEO_SCRIPT.md`) and add the YouTube link to the README and `docs/DEVPOST_SUBMISSION.md`.
+2. ~~Record the video~~ Done: https://youtu.be/QcPsoGghTVs (2:36), linked in the README and `docs/DEVPOST_SUBMISSION.md`.
 3. Submit on Devpost (tick AG Grid and Render); set the GitHub About description, website and topics; claim the Render credit.
 4. After submitting, push nothing: a push redeploys Render and resets the demo data.
 

@@ -1,6 +1,6 @@
 # Devpost submission text
 
-> Ready to paste. The only open item is the YouTube link in **Links**. Do not claim anything not listed as true in `docs/PAYPAL_NOTES.md`.
+> Ready to paste. Do not claim anything not listed as true in `docs/PAYPAL_NOTES.md`.
 
 **Project name:** IntentReceipt
 **Tagline:** Receipts for what the AI was asked to do.
@@ -60,4 +60,4 @@ Attach an intent receipt to agent-initiated orders; accept the evidence pack in 
 - Run locally: see README Quick start. 5-minute path: `docs/JUDGES.md`.
 
 **Built with:** typescript, next.js, tailwindcss, sqlite, paypal, paypal-orders-api, paypal-webhooks, paypal-disputes-api, paypal-agent-toolkit, groq, gpt-oss, vercel-ai-sdk, ag-grid, webauthn, passkeys, pdf-lib, render, claude-code
-**Links:** https://github.com/Aditya-Khetawat/intent-receipt · https://intentreceipt.onrender.com · [YouTube link: add before submitting]
+**Links:** https://github.com/Aditya-Khetawat/intent-receipt · https://intentreceipt.onrender.com · https://youtu.be/QcPsoGghTVs
